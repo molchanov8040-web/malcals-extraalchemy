@@ -1,34 +1,127 @@
-/* Malcal's ExtraAlchemy | Foundry VTT 13.351 | D&D5e */
-const EA={id:"malcals-extraalchemy",version:4};
-// ES modules have separate lexical scopes. The V13 UI bridge is loaded as a
-// second module, so expose one intentionally small shared module API.
-globalThis.EA=EA;
-Hooks.once("init",()=>{
- const reg=(key,type,def)=>game.settings.register(EA.id,key,{scope:"world",config:false,type,default:def});
- reg("state",Object,{actors:[],territory:"Лес",goal:"",history:[],recipes:[
- {id:"minor-healing",name:"Малое лечебное зелье",need:{Vita:2,Herba:1},dc:10,kind:"healing",formula:"2d4 + 2",time:30},
- {id:"antidote",name:"Простое противоядие",need:{Herba:1,Aqua:1},dc:10,kind:"utility",formula:"Преимущество на следующий спасбросок против яда в течение 1 часа",time:30},
- {id:"weakness-poison",name:"Яд слабости",need:{Venenum:2,Mortuus:1},dc:13,kind:"poison",formula:"Спасбросок Телосложения СЛ 12; при провале отравлен на 1 минуту",time:60}]});
- game.settings.registerMenu(EA.id,"openTools",{name:"Инструменты алхимии",label:"Открыть панели",hint:"Открыть сбор, эксперименты и рецепты.",icon:"fas fa-flask",type:EA.SettingsLauncher,restricted:false});
- console.info(`${EA.id} initialized`);
+/* Malcal's ExtraAlchemy — Foundry VTT 13.351 */
+const EA = { id: "malcals-extraalchemy", version: "0.1.6" };
+globalThis.EA = EA;
+
+EA.esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+}[char]));
+EA.state = () => game.settings.get(EA.id, "state");
+EA.save = state => game.settings.set(EA.id, "state", state);
+EA.actors = () => EA.state().actors.map(id => game.actors.get(id)).filter(Boolean);
+EA.actor = (root, fallback) => game.actors.get(root.querySelector("#ea-actor")?.value) ?? fallback ?? game.user.character ?? EA.actors()[0] ?? null;
+EA.selectActor = selected => `<label>Персонаж<select id="ea-actor">${EA.actors().map(actor => `<option value="${actor.id}"${actor.id === selected?.id ? " selected" : ""}>${EA.esc(actor.name)}</option>`).join("")}</select></label>`;
+
+class Launcher extends FormApplication {
+  static get defaultOptions() {
+    return foundry.utils.mergeObject(super.defaultOptions, { id: "ea-launcher", title: "Инструменты алхимии", width: 380, height: "auto", closeOnSubmit: false });
+  }
+  activateListeners(html) {
+    super.activateListeners(html);
+    const root = html[0] ?? html;
+    root.innerHTML = `<section class="ea-panel"><p>Открыть панель алхимии:</p><div class="ea-actions"><button type="button" data-ea="config">Настройка</button><button type="button" data-ea="gather">Сбор</button><button type="button" data-ea="experiments">Эксперименты</button><button type="button" data-ea="recipes">Рецепты</button></div></section>`;
+    root.querySelectorAll("[data-ea]").forEach(button => button.addEventListener("click", () => EA.open(button.dataset.ea)));
+  }
+  async _updateObject() {}
+}
+
+Hooks.once("init", () => {
+  game.settings.register(EA.id, "state", {
+    scope: "world", config: false, type: Object,
+    default: {
+      actors: [], territory: "Лес", goal: "", history: [], recipes: [
+        { id: "minor-healing", name: "Малое лечебное зелье", need: { Vita: 2, Herba: 1 }, dc: 10, formula: "2d4 + 2" },
+        { id: "antidote", name: "Простое противоядие", need: { Herba: 1, Aqua: 1 }, dc: 10, formula: "Преимущество против яда на 1 час" }
+      ]
+    }
+  });
+  game.settings.registerMenu(EA.id, "launcher", {
+    name: "Инструменты алхимии", label: "Открыть панели", hint: "Открыть настройку, сбор, эксперименты и рецепты.",
+    icon: "fas fa-flask", type: Launcher, restricted: false
+  });
 });
-Hooks.once("ready",()=>{if(game.system.id!=="dnd5e")ui.notifications.warn("ExtraAlchemy рассчитан на D&D 5e.");});
-EA.SettingsLauncher=class extends FormApplication{static get defaultOptions(){return foundry.utils.mergeObject(super.defaultOptions,{title:"Инструменты алхимии",template:null,width:360,height:"auto",closeOnSubmit:false});}getData(){return{};}activateListeners(html){super.activateListeners(html);const root=html[0]||html;root.innerHTML=`<div class="ea-panel ea-launcher"><p>Открыть нужную панель алхимии:</p><div class="ea-actions"><button type="button" data-ea-open="config">Настройка</button><button type="button" data-ea-open="gather">Сбор</button><button type="button" data-ea-open="experiments">Эксперименты</button><button type="button" data-ea-open="recipes">Рецепты</button></div></div>`;root.querySelectorAll("[data-ea-open]").forEach(b=>b.onclick=()=>EA.openSection(b.dataset.eaOpen));}}
-Hooks.on("renderSidebar",(app,html)=>{const root=html?.[0]||html;if(!root||root.querySelector(".ea-sidebar-launch"))return;const nav=root.querySelector("nav.tabs")||root.querySelector(".tabs");if(!nav)return;const b=document.createElement("a");b.className="item ea-sidebar-launch";b.title="Инструменты алхимии";b.setAttribute("role","button");b.innerHTML='<i class="fas fa-flask"></i><span>Алхимия</span>';b.addEventListener("click",e=>{e.preventDefault();EA.hub();});nav.append(b);});
-Hooks.on("renderActorSheet",(app,html)=>{const root=html?.[0]||html;if(!root||root.querySelector(".ea-open"))return;const b=document.createElement("button");b.className="ea-open";b.type="button";b.innerHTML='<i class="fas fa-flask"></i> Инструменты алхимии';b.onclick=()=>EA.hub(app.actor);(root.querySelector(".window-content")||root).prepend(b);});
-EA.state=()=>game.settings.get(EA.id,"state");EA.save=async s=>game.settings.set(EA.id,"state",s);
-EA.esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-EA.hub=(actor=null)=>{const sections=[["config","Настройка"],["gather","Сбор"],["experiments","Эксперименты"],["recipes","Рецепты"]],content=`<section class="ea-panel"><p>Алхимические инструменты кампании</p><div class="ea-actions">${sections.map(([id,n])=>`<button type="button" data-open="${id}"><i class="fas fa-flask"></i> ${n}</button>`).join("")}</div></section>`;new Dialog({title:"Инструменты алхимии",content,buttons:{close:{label:"Закрыть"}},render:h=>{h[0].querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>EA.openSection(b.dataset.open,actor));}}).render(true);};
-EA.openSection=(name,actor)=>({config:EA.config,gather:EA.gatherWindow,experiments:EA.experimentWindow,recipes:EA.recipeWindow}[name]?.(actor));
-EA.config=()=>{if(!game.user.isGM)return ui.notifications.warn("Настройки алхимии доступны мастеру.");const s=EA.state(),actors=[...game.actors].filter(a=>a.type==="character"),content=`<section class="ea-panel"><label>Персонажи игроков<select id="ea-actors" multiple size="7">${actors.map(a=>`<option value="${EA.esc(a.id)}" ${s.actors.includes(a.id)?"selected":""}>${EA.esc(a.name)}</option>`).join("")}</select></label><label>Территория<input id="ea-territory" value="${EA.esc(s.territory)}" placeholder="лес, болото, горы…"></label><label>Что собирают<input id="ea-goal" value="${EA.esc(s.goal)}" placeholder="лечебные травы, ядовитые грибы…"></label></section>`;new Dialog({title:"Алхимия — настройка",content,buttons:{save:{label:"Сохранить",callback:async h=>{const el=h[0];s.actors=[...el.querySelector("#ea-actors").selectedOptions].map(o=>o.value);s.territory=el.querySelector("#ea-territory").value;s.goal=el.querySelector("#ea-goal").value;await EA.save(s);ui.notifications.info("Настройки алхимии сохранены.");}},cancel:{label:"Отмена"}}}).render(true);};
-EA.allowedActors=()=>EA.state().actors.map(id=>game.actors.get(id)).filter(Boolean);
-EA.actorSelect=(chosen=null)=>`<label>Персонаж<select id="ea-actor">${EA.allowedActors().map(a=>`<option value="${a.id}" ${chosen?.id===a.id?"selected":""}>${EA.esc(a.name)}</option>`).join("")}</select></label>`;
-EA.pickActor=(el,fallback)=>game.actors.get(el.querySelector("#ea-actor")?.value)||fallback||game.user.character||EA.allowedActors()[0];
-EA.gatherWindow=(fallback=null)=>{const s=EA.state();if(!game.user.isGM&&!s.actors.includes(fallback?.id||game.user.character?.id))return ui.notifications.warn("Ваш персонаж не включён мастером в инструменты алхимии.");const content=`<section class="ea-panel">${EA.actorSelect(fallback)}<label>Территория<input id="ea-territory" value="${EA.esc(s.territory)}" ${game.user.isGM?"":"readonly"}></label><label>Ищем<input id="ea-goal" value="${EA.esc(s.goal)}" placeholder="категория или желаемый эффект"></label><label>СЛ поиска<input id="ea-dc" type="number" value="10" min="1"></label><div class="ea-actions"><button data-action="collect">Собрать (1 час)</button><button data-action="stock">Склад</button><button data-action="history">История сбора</button></div></section>`;new Dialog({title:"Алхимия — сбор",content,buttons:{close:{label:"Закрыть"}},render:h=>{const el=h[0];el.querySelector('[data-action="collect"]').onclick=()=>EA.collect(el,fallback);el.querySelector('[data-action="stock"]').onclick=()=>EA.stock(EA.pickActor(el,fallback));el.querySelector('[data-action="history"]').onclick=()=>EA.history();}}).render(true);};
-EA.collect=async(el,fallback)=>{const actor=EA.pickActor(el,fallback);if(!actor)return ui.notifications.warn("Не выбран персонаж.");const goal=el.querySelector("#ea-goal").value||"случайное алхимическое сырьё",area=el.querySelector("#ea-territory").value,dc=Number(el.querySelector("#ea-dc").value)||10,skill=actor.system.skills?.sur?"sur":actor.system.skills?.nat?"nat":null;let total=0;if(skill&&actor.rollSkill){const r=await actor.rollSkill(skill,{chatMessage:true});total=r?.total||0;}else{const r=await(new Roll("1d20 + @abilities.wis.mod",actor.getRollData())).evaluate();await r.toMessage({speaker:ChatMessage.getSpeaker({actor}),flavor:"Поиск алхимического сырья"});total=r.total;}const s=EA.state();if(total<dc){s.history.unshift({date:new Date().toLocaleString(),actor:actor.name,area,goal,result:`Провал (${total}/${dc})`});await EA.save(s);return ui.notifications.info(`Сбор не удался: ${total} против СЛ ${dc}.`);}const found=game.user.isGM?await EA.askFind(area,goal):null;if(!game.user.isGM){ChatMessage.create({content:`<p>Запрос на сбор от <b>${EA.esc(actor.name)}</b>: ${EA.esc(goal)} в местности «${EA.esc(area)}». Мастер может внести находку через склад.</p>`,whisper:ChatMessage.getWhisperRecipients("GM")});s.history.unshift({date:new Date().toLocaleString(),actor:actor.name,area,goal,result:`Успех ${total}/${dc}; ожидает решения мастера`});await EA.save(s);return;}if(!found)return;await EA.addIngredient(actor,found.name,found.qty,found.aspects);s.history.unshift({date:new Date().toLocaleString(),actor:actor.name,area,goal,result:`${found.name} × ${found.qty}`});await EA.save(s);ui.notifications.info(`Найдено: ${found.name} × ${found.qty}`);};
-EA.askFind=(area,goal)=>new Promise(resolve=>new Dialog({title:"Подтвердить находку",content:`<section class="ea-panel"><p>${EA.esc(area)} — ${EA.esc(goal)}</p><label>Название сырья<input id="ea-found" value="Трава"></label><label>Меры<input id="ea-qty" type="number" value="1" min="1"></label><label>Аспекты (JSON, например {&quot;Vita&quot;:1})<input id="ea-aspects" value="{}"></label></section>`,buttons:{ok:{label:"Добавить",callback:h=>{const e=h[0];let a={};try{a=JSON.parse(e.querySelector("#ea-aspects").value||"{}");}catch{return ui.notifications.error("Некорректный JSON аспектов.");}resolve({name:e.querySelector("#ea-found").value.trim()||"Трава",qty:Math.max(1,Number(e.querySelector("#ea-qty").value)||1),aspects:a});}},cancel:{label:"Отмена",callback:()=>resolve(null)}},close:()=>resolve(null)}).render(true));
-EA.addIngredient=async(actor,name,qty=1,aspects={})=>{const item=actor.items.find(i=>i.getFlag(EA.id,"kind")==="ingredient"&&i.name===name);if(item){const current=item.getFlag(EA.id,"aspects")||{},merged={...current};for(const [key,value] of Object.entries(aspects||{})){const n=Number(value);if(Number.isFinite(n)&&n>0)merged[key]=(Number(merged[key])||0)+n;}await item.update({"system.quantity":(Number(item.system.quantity)||1)+qty,[`flags.${EA.id}.aspects`]:merged,[`flags.${EA.id}.identified`]:Boolean(item.getFlag(EA.id,"identified")||Object.keys(merged).length)});return;}await actor.createEmbeddedDocuments("Item",[{name,type:"loot",img:"icons/consumables/herbs/herb-leaf-green.webp",system:{quantity:qty,weight:0.1,price:{value:0,denomination:"gp"},description:{value:"Алхимический ингредиент."}},flags:{[EA.id]:{schemaVersion:3,kind:"ingredient",aspects,identified:Object.keys(aspects).length>0}}}]);};
-EA.stock=actor=>{if(!actor)return ui.notifications.warn("Выберите персонажа.");const rows=actor.items.filter(i=>i.getFlag(EA.id,"kind")==="ingredient").map(i=>`<li>${EA.esc(i.name)} × ${i.system.quantity||1} — ${EA.esc(JSON.stringify(i.getFlag(EA.id,"aspects")||{}))}</li>`).join("")||"<li>Склад пуст</li>";new Dialog({title:`Склад: ${EA.esc(actor.name)}`,content:`<ul>${rows}</ul>`,buttons:{close:{label:"Закрыть"}}}).render(true);};
-EA.history=()=>{const rows=EA.state().history.map(x=>`<tr><td>${EA.esc(x.date)}</td><td>${EA.esc(x.actor)}</td><td>${EA.esc(x.area)}</td><td>${EA.esc(x.goal)}</td><td>${EA.esc(x.result)}</td></tr>`).join("")||"<tr><td colspan="5">Записей пока нет</td></tr>";new Dialog({title:"История сбора",content:`<table class="ea-table"><thead><tr><th>Дата</th><th>Персонаж</th><th>Местность</th><th>Цель</th><th>Результат</th></tr></thead><tbody>${rows}</tbody></table>`,buttons:{close:{label:"Закрыть"}}}).render(true);};
-EA.experimentWindow=fallback=>{const content=`<section class="ea-panel">${EA.actorSelect(fallback)}<p>Выберите до двух ингредиентов для изучения или эксперимента.</p><label>Ингредиент 1<select id="ea-i1"></select></label><label>Ингредиент 2<select id="ea-i2"><option value="">— не выбирать —</option></select></label><label>Гипотеза / желаемый эффект<input id="ea-hyp" placeholder="например: лечение, сон, яд"></label><button id="ea-test">Провести эксперимент</button></section>`;new Dialog({title:"Алхимия — эксперименты",content,buttons:{close:{label:"Закрыть"}},render:h=>{const el=h[0],fill=()=>{const a=EA.pickActor(el,fallback),items=a?.items.filter(i=>i.getFlag(EA.id,"kind")==="ingredient")||[];for(const sel of el.querySelectorAll("#ea-i1,#ea-i2"))sel.innerHTML=(sel.id==="ea-i2"?'<option value="">— не выбирать —</option>':"")+items.map(i=>`<option value="${i.id}">${EA.esc(i.name)} ×${i.system.quantity||1}</option>`).join("");};fill();el.querySelector("#ea-actor")?.addEventListener("change",fill);el.querySelector("#ea-test").onclick=async()=>{const a=EA.pickActor(el,fallback),it=a?.items.get(el.querySelector("#ea-i1").value),hyp=el.querySelector("#ea-hyp").value||"без заданной гипотезы";if(!it)return ui.notifications.warn("Сначала выберите ингредиент.");const aspects=it.getFlag(EA.id,"aspects")||{},text=Object.keys(aspects).length?`Известные аспекты: ${JSON.stringify(aspects)}`:"Свойства пока не внесены мастером.";new Dialog({title:"Результат эксперимента",content:`<p>${EA.esc(it.name)}; гипотеза: ${EA.esc(hyp)}.</p><p>${EA.esc(text)}</p><p>Мастер раскрывает новое свойство и при необходимости добавляет его в склад предмета.</p>`,buttons:{ok:{label:"Понятно"}}}).render(true);};}}).render(true);};
-EA.recipeWindow=()=>{const s=EA.state(),rows=s.recipes.map(r=>`<li><b>${EA.esc(r.name)}</b> — ${EA.esc(JSON.stringify(r.need))}; СЛ ${r.dc}; ${EA.esc(r.formula)}</li>`).join("")||"<li>Рецептов пок нет</li>",content=`<section class="ea-panel"><h3>Известные рецепты</h3><ul id="ea-recipe-list">${rows}</ul>${game.user.isGM?'<hr><h3>Добавить рецепт (только мастер)</h3><label>Название<input id="ea-rname"></label><label>Требуемые аспекты JSON<input id="ea-rneed" value="{&quot;Vita&quot;:2,&quot;Herba&quot;:1}"></label><label>СЛ<input id="ea-rdc" type="number" value="10"></label><label>Тип эффекта<input id="ea-rkind" value="healing"></label><label>Эффект / формула<input id="ea-rformula" value="2d4 + 2"></label><button id="ea-rsave">Добавить рецепт</button>':''}</section>`;new Dialog({title:"Алхимия — рецепты",content,buttons:{close:{label:"Закрыть"}},render:h=>{const el=h[0],b=el.querySelector("#ea-rsave");if(!b)return;b.onclick=async()=>{let need;try{need=JSON.parse(el.querySelector("#ea-rneed").value);}catch{return ui.notifications.error("Требования должны быть корректным JSON.");}if(!need||typeof need!=="object"||Array.isArray(need)||Object.values(need).some(v=>!Number.isFinite(Number(v))||Number(v)<1))return ui.notifications.error("Аспекты должны быть объектом с положительными числами.");const state=EA.state(),recipe={id:foundry.utils.randomID(),name:el.querySelector("#ea-rname").value.trim()||"Новый рецепт",need,dc:Math.max(1,Number(el.querySelector("#ea-rdc").value)||10),kind:el.querySelector("#ea-rkind").value.trim()||"utility",formula:el.querySelector("#ea-rformula").value.trim(),time:30};state.recipes.push(recipe);await EA.save(state);el.querySelector("#ea-recipe-list").insertAdjacentHTML("beforeend",`<li><b>${EA.esc(recipe.name)}</b> — ${EA.esc(JSON.stringify(recipe.need))}; СЛ ${recipe.dc}; ${EA.esc(recipe.formula)}</li>`);ui.notifications.info("Рецепт добавлен.");};}}).render(true);};
+
+/* V13.351 passes scene controls as a record, for example controls.tokens.tools. */
+Hooks.on("getSceneControlButtons", controls => {
+  const control = controls.tokens ?? controls.token ?? Object.values(controls).find(entry => entry?.name === "token");
+  if (!control) return;
+  const tool = {
+    name: "malcals-extraalchemy-tools", title: "Инструменты алхимии", icon: "fa-solid fa-flask",
+    order: 999, button: true, visible: true, onChange: () => EA.hub()
+  };
+  if (Array.isArray(control.tools)) {
+    if (!control.tools.some(entry => entry.name === tool.name)) control.tools.push(tool);
+  } else {
+    control.tools ??= {};
+    control.tools[tool.name] ??= tool;
+  }
+});
+Hooks.once("ready", () => console.info(`${EA.id} | ready; flask added to Token scene controls.`));
+
+EA.hub = fallback => {
+  const content = `<section class="ea-panel"><p>Алхимические инструменты кампании</p><div class="ea-actions"><button data-open="config">Настройка</button><button data-open="gather">Сбор</button><button data-open="experiments">Эксперименты</button><button data-open="recipes">Рецепты</button></div></section>`;
+  new Dialog({ title: "Инструменты алхимии", content, buttons: { close: { label: "Закрыть" } }, render: html => {
+    const root = html[0] ?? html;
+    root.querySelectorAll("[data-open]").forEach(button => button.addEventListener("click", () => EA.open(button.dataset.open, fallback)));
+  }}).render(true);
+};
+EA.open = (name, fallback) => ({ config: EA.config, gather: EA.gather, experiments: EA.experiments, recipes: EA.recipes }[name]?.(fallback));
+
+EA.config = () => {
+  if (!game.user.isGM) return ui.notifications.warn("Настройка доступна только мастеру.");
+  const state = EA.state();
+  const options = Array.from(game.actors).filter(actor => actor.type === "character").map(actor => `<option value="${actor.id}"${state.actors.includes(actor.id) ? " selected" : ""}>${EA.esc(actor.name)}</option>`).join("");
+  const content = `<section class="ea-panel"><label>Персонажи игроков<select id="ea-actors" multiple size="7">${options}</select></label><label>Территория<input id="ea-territory" value="${EA.esc(state.territory)}"></label><label>Цель сбора<input id="ea-goal" value="${EA.esc(state.goal)}" placeholder="лечебные травы, ядовитые грибы"></label></section>`;
+  new Dialog({ title: "Алхимия — настройка", content, buttons: {
+    save: { label: "Сохранить", callback: async html => {
+      const root = html[0] ?? html;
+      state.actors = Array.from(root.querySelector("#ea-actors").selectedOptions).map(option => option.value);
+      state.territory = root.querySelector("#ea-territory").value.trim() || "Не задана";
+      state.goal = root.querySelector("#ea-goal").value.trim();
+      await EA.save(state); ui.notifications.info("Настройки сохранены.");
+    }}, cancel: { label: "Отмена" }
+  }}).render(true);
+};
+
+EA.gather = fallback => {
+  const state = EA.state();
+  const actor = fallback ?? game.user.character;
+  if (!game.user.isGM && (!actor || !state.actors.includes(actor.id))) return ui.notifications.warn("Мастер не добавил вашего персонажа в настройки алхимии.");
+  const content = `<section class="ea-panel">${EA.selectActor(actor)}<label>Территория<input id="ea-area" value="${EA.esc(state.territory)}"${game.user.isGM ? "" : " readonly"}></label><label>Ищем<input id="ea-goal" value="${EA.esc(state.goal)}"></label><label>СЛ поиска<input id="ea-dc" type="number" value="10" min="1"></label><div class="ea-actions"><button data-action="collect">Собрать (1 час)</button><button data-action="stock">Склад</button><button data-action="history">История</button></div></section>`;
+  new Dialog({ title: "Алхимия — сбор", content, buttons: { close: { label: "Закрыть" } }, render: html => {
+    const root = html[0] ?? html;
+    root.querySelector("[data-action='collect']").onclick = () => EA.collect(root, fallback);
+    root.querySelector("[data-action='stock']").onclick = () => EA.stock(EA.actor(root, fallback));
+    root.querySelector("[data-action='history']").onclick = () => EA.history();
+  }}).render(true);
+};
+
+EA.collect = async (root, fallback) => {
+  const actor = EA.actor(root, fallback);
+  if (!actor) return ui.notifications.warn("Не выбран персонаж.");
+  const area = root.querySelector("#ea-area").value.trim() || "Неизвестная местность";
+  const goal = root.querySelector("#ea-goal").value.trim() || "алхимическое сырьё";
+  const dc = Number(root.querySelector("#ea-dc").value) || 10;
+  let total;
+  if (actor.rollSkill && actor.system.skills?.sur) total = (await actor.rollSkill("sur", { chatMessage: true })).total;
+  else { const roll = await (new Roll("1d20 + @abilities.wis.mod", actor.getRollData())).evaluate(); await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: "Поиск алхимического сырья" }); total = roll.total; }
+  const state = EA.state();
+  state.history.unshift({ date: new Date().toLocaleString(), actor: actor.name, area, goal, result: total >= dc ? `Успех (${total}/${dc})` : `Провал (${total}/${dc})` });
+  await EA.save(state);
+  if (total < dc) return ui.notifications.info(`Сбор не удался: ${total} против СЛ ${dc}.`);
+  if (!game.user.isGM) { await ChatMessage.create({ content: `<p><b>${EA.esc(actor.name)}</b> успешно ищет «${EA.esc(goal)}» в местности «${EA.esc(area)}». Мастер определяет находку.</p>`, whisper: ChatMessage.getWhisperRecipients("GM") }); return ui.notifications.info("Успех отправлен мастеру."); }
+  EA.find(actor);
+};
+
+EA.find = actor => new Dialog({ title: "Добавить находку", content: `<section class="ea-panel"><label>Название<input id="ea-name" value="Трава"></label><label>Меры<input id="ea-qty" type="number" value="1" min="1"></label><label>Аспекты JSON<input id="ea-aspects" value="{}" placeholder='{"Vita":1}'></label></section>`, buttons: {
+  add: { label: "Добавить", callback: async html => { const root = html[0] ?? html; let aspects; try { aspects = JSON.parse(root.querySelector("#ea-aspects").value || "{}"); } catch { return ui.notifications.error("Аспекты должны быть JSON."); } await EA.addIngredient(actor, root.querySelector("#ea-name").value.trim() || "Трава", Math.max(1, Number(root.querySelector("#ea-qty").value) || 1), aspects); ui.notifications.info("Находка добавлена на склад."); } }, cancel: { label: "Отмена" }
+}}).render(true);
+EA.addIngredient = async (actor, name, qty, aspects) => {
+  const item = actor.items.find(entry => entry.getFlag(EA.id, "kind") === "ingredient" && entry.name === name);
+  if (item) { const merged = foundry.utils.deepClone(item.getFlag(EA.id, "aspects") ?? {}); for (const [key, value] of Object.entries(aspects)) merged[key] = (Number(merged[key]) || 0) + (Number(value) || 0); return item.update({ "system.quantity": (Number(item.system.quantity) || 1) + qty, [`flags.${EA.id}.aspects`]: merged }); }
+  return actor.createEmbeddedDocuments("Item", [{ name, type: "loot", img: "icons/consumables/herbs/herb-leaf-green.webp", system: { quantity: qty, weight: 0.1, price: { value: 0, denomination: "gp" }, description: { value: "Алхимический ингредиент." } }, flags: { [EA.id]: { kind: "ingredient", aspects } } }]);
+};
+EA.stock = actor => { if (!actor) return ui.notifications.warn("Выберите персонажа."); const rows = actor.items.filter(item => item.getFlag(EA.id, "kind") === "ingredient").map(item => `<li><b>${EA.esc(item.name)}</b> × ${item.system.quantity || 1} — ${EA.esc(JSON.stringify(item.getFlag(EA.id, "aspects") ?? {}))}</li>`).join("") || "<li>Склад пуст.</li>"; new Dialog({ title: `Склад: ${EA.esc(actor.name)}`, content: `<ul>${rows}</ul>`, buttons: { close: { label: "Закрыть" } } }).render(true); };
+EA.history = () => { const rows = EA.state().history.map(entry => `<tr><td>${EA.esc(entry.date)}</td><td>${EA.esc(entry.actor)}</td><td>${EA.esc(entry.area)}</td><td>${EA.esc(entry.goal)}</td><td>${EA.esc(entry.result)}</td></tr>`).join("") || `<tr><td colspan="5">Записей пока нет.</td></tr>`; new Dialog({ title: "История сбора", content: `<table class="ea-table"><thead><tr><th>Дата</th><th>Персонаж</th><th>Местность</th><th>Цель</th><th>Результат</th></tr></thead><tbody>${rows}</tbody></table>`, buttons: { close: { label: "Закрыть" } } }).render(true); };
+
+EA.experiments = fallback => { const content = `<section class="ea-panel">${EA.selectActor(fallback)}<p>Выберите ингредиент, чтобы увидеть известные свойства.</p><label>Ингредиент<select id="ea-item"></select></label><label>Гипотеза<input id="ea-hypothesis" placeholder="лечение, сон, яд"></label><button type="button" id="ea-test">Провести эксперимент</button></section>`; new Dialog({ title: "Алхимия — эксперименты", content, buttons: { close: { label: "Закрыть" } }, render: html => { const root = html[0] ?? html; const fill = () => { const actor = EA.actor(root, fallback); root.querySelector("#ea-item").innerHTML = (actor?.items.filter(item => item.getFlag(EA.id, "kind") === "ingredient") ?? []).map(item => `<option value="${item.id}">${EA.esc(item.name)} × ${item.system.quantity || 1}</option>`).join(""); }; fill(); root.querySelector("#ea-actor")?.addEventListener("change", fill); root.querySelector("#ea-test").onclick = () => { const actor = EA.actor(root, fallback), item = actor?.items.get(root.querySelector("#ea-item").value); if (!item) return ui.notifications.warn("Выберите ингредиент."); new Dialog({ title: "Результат эксперимента", content: `<p><b>${EA.esc(item.name)}</b></p><p>Гипотеза: ${EA.esc(root.querySelector("#ea-hypothesis").value || "не указана")}</p><p>Известные аспекты: ${EA.esc(JSON.stringify(item.getFlag(EA.id, "aspects") ?? {}))}</p>`, buttons: { ok: { label: "Понятно" } } }).render(true); }; } }).render(true); };
+EA.recipes = () => { const state = EA.state(); const rows = state.recipes.map(recipe => `<li><b>${EA.esc(recipe.name)}</b> — ${EA.esc(JSON.stringify(recipe.need))}; СЛ ${recipe.dc}; ${EA.esc(recipe.formula)}</li>`).join("") || "<li>Рецептов пока нет.</li>"; const editor = game.user.isGM ? `<hr><h3>Добавить рецепт</h3><label>Название<input id="ea-rname"></label><label>Аспекты JSON<input id="ea-rneed" value='{"Vita":2,"Herba":1}'></label><label>СЛ<input id="ea-rdc" type="number" value="10"></label><label>Эффект<input id="ea-rformula" value="2d4 + 2"></label><button type="button" id="ea-add">Добавить рецепт</button>` : ""; new Dialog({ title: "Алхимия — рецепты", content: `<section class="ea-panel"><h3>Известные рецепты</h3><ul id="ea-recipes">${rows}</ul>${editor}</section>`, buttons: { close: { label: "Закрыть" } }, render: html => { const root = html[0] ?? html, button = root.querySelector("#ea-add"); if (!button) return; button.onclick = async () => { let need; try { need = JSON.parse(root.querySelector("#ea-rneed").value); } catch { return ui.notifications.error("Аспекты должны быть JSON."); } const recipe = { id: foundry.utils.randomID(), name: root.querySelector("#ea-rname").value.trim() || "Новый рецепт", need, dc: Math.max(1, Number(root.querySelector("#ea-rdc").value) || 10), formula: root.querySelector("#ea-rformula").value.trim() }; state.recipes.push(recipe); await EA.save(state); root.querySelector("#ea-recipes").insertAdjacentHTML("beforeend", `<li><b>${EA.esc(recipe.name)}</b> — ${EA.esc(JSON.stringify(recipe.need))}; СЛ ${recipe.dc}; ${EA.esc(recipe.formula)}</li>`); ui.notifications.info("Рецепт добавлен."); }; } }).render(true); };
