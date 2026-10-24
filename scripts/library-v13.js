@@ -1,4 +1,4 @@
-/* ExtraAlchemy v0.1.8 additions for Foundry VTT 13 */
+/* ExtraAlchemy v0.1.9 additions for Foundry VTT 13 */
 Hooks.once("init", () => {
   const menu = game.settings.menus.get(`${EA.id}.launcher`);
   if (menu) menu.restricted = true;
@@ -25,20 +25,27 @@ EA.ensureHerbLibrary = async () => {
   if (!pack) {
     if (!game.user.isGM) return null;
     try {
-      pack = await foundry.documents.collections.CompendiumCollection.createCompendium({
+      const CompendiumClass = globalThis.CompendiumCollection ?? foundry.documents.collections.CompendiumCollection;
+      pack = await CompendiumClass.createCompendium({
         type: "Item", name: EA.libraryPackName, label: "Malcal's ExtraAlchemy — Библиотека трав", package: "world",
         ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE }
       });
+      ui.compendium?.render(true);
     } catch (error) {
       console.error(`${EA.id} | Herb library creation failed`, error);
+      ui.notifications.error("Не удалось создать компендиум библиотеки трав. Подробности — в консоли.");
       return null;
     }
   }
   if (game.user.isGM) {
-    const existing = await pack.getDocuments();
-    const seeds = new Set(existing.map(EA.herbFlag).filter(Boolean).map(data => data.seedId));
-    const missing = EA.herbSeeds().filter(data => !seeds.has(data.flags[EA.id]["library-herb"].seedId));
-    if (missing.length) await pack.documentClass.createDocuments(missing, { pack: pack.collection });
+    try {
+      const existing = await pack.getDocuments();
+      const seeds = new Set(existing.map(EA.herbFlag).filter(Boolean).map(data => data.seedId));
+      const missing = EA.herbSeeds().filter(data => !seeds.has(data.flags[EA.id]["library-herb"].seedId));
+      if (missing.length) await pack.documentClass.createDocuments(missing, { pack: pack.collection });
+    } catch (error) {
+      console.error(`${EA.id} | Herb library seed failed`, error);
+    }
   }
   return pack;
 };
@@ -63,8 +70,8 @@ EA.find = async actor => {
   const data = EA.herbFlag(herb);
   await EA.addIngredient(actor, herb.name, 1, data.aspects ?? {});
   const state = EA.state();
-  const entry = state.history.find(row => row.id === pending.historyId);
-  if (entry) entry.result = `${entry.result}; найдена: ${herb.name}`;
+  const entry = state.history.find(row => row.actor === actor.name && row.area === pending.territory);
+  if (entry && !entry.result.includes("найдена:")) entry.result = `${entry.result}; найдена: ${herb.name}`;
   await EA.save(state);
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<p><b>${EA.esc(actor.name)}</b> находит: <b>${EA.esc(herb.name)}</b>.</p>` });
   ui.notifications.info(`На склад добавлено: ${herb.name}.`);
@@ -108,7 +115,6 @@ EA.library = async () => {
   return pack.render(true);
 };
 
-const oldHub = EA.hub;
 EA.hub = fallback => {
   const buttons = `${game.user.isGM ? `<button data-open="config">Настройка</button>` : ""}<button data-open="gather">Сбор</button><button data-open="experiments">Эксперименты</button><button data-open="recipes">Рецепты</button>${game.user.isGM ? `<button data-open="library">Библиотека трав</button>` : ""}`;
   new Dialog({ title: "Инструменты алхимии", content: `<section class="ea-panel"><p>Алхимические инструменты кампании</p><div class="ea-actions">${buttons}</div></section>`, buttons: { close: { label: "Закрыть" } }, render: html => (html[0] ?? html).querySelectorAll("[data-open]").forEach(button => button.onclick = () => EA.open(button.dataset.open, fallback)) }).render(true);
