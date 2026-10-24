@@ -1,0 +1,24 @@
+{
+  "id": "malcals-extraalchemy",
+  "title": "Malcal's ExtraAlchemy",
+  "description": "Herb gathering, ingredient research, recipes, and potion crafting for Foundry VTT 13.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13.351"
+  },
+  "authors": [
+    { "name": "Malcal" }
+  ],
+  "esmodules": ["scripts/extraalchemy.js"],
+  "styles": ["styles/extraalchemy.css"],
+  "languages": [
+    { "lang": "ru", "name": "Русский", "path": "lang/ru.json" },
+    { "lang": "en", "name": "English", "path": "lang/en.json" }
+  ],
+  "relationships": {
+    "systems": [{ "id": "dnd5e", "type": "system" }],
+    "requires": [],
+    "recommends": [{ "id": "midi-qol", "type": "module" }]
+  }
+}

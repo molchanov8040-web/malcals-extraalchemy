@@ -1,0 +1,11 @@
+{
+  "MECAlch": {
+    "Title": "Alchemy Tools",
+    "Config": "Settings",
+    "Gathering": "Gathering",
+    "Experiments": "Experiments",
+    "Recipes": "Recipes",
+    "Stock": "Stock",
+    "History": "Gathering History"
+  }
+}
