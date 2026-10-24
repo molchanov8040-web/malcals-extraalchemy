@@ -57,10 +57,10 @@
     if (!root?.querySelector) return false;
     if (root.querySelector("[data-ea-sidebar-launcher]")) return true;
 
-    const tabs = root.querySelector(
-      "nav.tabs, nav[data-group='primary'], #sidebar-tabs, .sidebar-tabs"
-    );
+    const tabs = root.querySelector("nav.tabs, nav[data-group='primary'], #sidebar-tabs, .sidebar-tabs")
+      ?? document.querySelector("#sidebar nav.tabs, #ui-right nav.tabs, #sidebar-tabs");
     if (!tabs) return false;
+    if (tabs.querySelector("[data-ea-sidebar-launcher]")) return true;
 
     const button = document.createElement("button");
     button.type = "button";
@@ -82,6 +82,21 @@
     const SidebarClass = foundry?.applications?.sidebar?.Sidebar;
     return (SidebarClass && app instanceof SidebarClass) || app?.constructor?.name === "Sidebar";
   };
+
+  // This is the reliable entry point in the left Scene Controls panel. The
+  // public hook is part of the V13 UI API and does not patch core internals.
+  Hooks.on("getSceneControlButtons", (controls) => {
+    const target = controls.find((control) => control.name === "token") ?? controls[0];
+    if (!target || target.tools.some((tool) => tool.name === `${MODULE_ID}-tools`)) return;
+    target.tools.push({
+      name: `${MODULE_ID}-tools`,
+      title: "Инструменты алхимии",
+      icon: "fas fa-flask",
+      button: true,
+      visible: true,
+      onChange: () => EA.hub()
+    });
+  });
 
   Hooks.on("renderApplicationV2", (app) => {
     if (!isSidebar(app)) return;
