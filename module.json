@@ -2,7 +2,7 @@
   "id": "malcals-extraalchemy",
   "title": "Malcal's ExtraAlchemy",
   "description": "Herb gathering, ingredient research, recipes, potion crafting, and a GM herb library for Foundry VTT 13.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "compatibility": { "minimum": "13", "verified": "13.351" },
   "authors": [{ "name": "Malcal" }],
   "url": "https://github.com/molchanov8040-web/malcals-extraalchemy",
