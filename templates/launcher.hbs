@@ -1,3 +1,14 @@
-<form class="ea-panel">
-  <p>Инструменты алхимии</p>
+<form class="ea-panel" autocomplete="off">
+  <p>Открыть панель алхимии:</p>
+  <div class="ea-actions">
+    <button type="button" data-ea-open="config"><i class="fas fa-cog"></i> Настройка</button>
+    <button type="button" data-ea-open="gather"><i class="fas fa-seedling"></i> Сбор</button>
+    <button type="button" data-ea-open="stock"><i class="fas fa-box"></i> Склад</button>
+    <button type="button" data-ea-open="experiments"><i class="fas fa-flask"></i> Изготовление</button>
+    <button type="button" data-ea-open="recipes"><i class="fas fa-book"></i> Рецепты</button>
+    <button type="button" data-ea-open="library"><i class="fas fa-leaf"></i> Библиотека трав</button>
+  </div>
+  <hr>
+  <p class="notes">Сброс удаляет настройки и данные алхимии, сохранённые модулем в этом мире. Ингредиенты в инвентарях персонажей не удаляются.</p>
+  <button type="button" class="ea-reset" data-ea-reset><i class="fas fa-trash"></i> Сбросить данные модуля</button>
 </form>
