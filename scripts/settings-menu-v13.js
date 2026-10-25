@@ -1,4 +1,4 @@
-/* Foundry VTT 13 settings-menu repair for Malcal's ExtraAlchemy. */
+/* Foundry VTT 13 settings launcher for Malcal's ExtraAlchemy. */
 class EASettingsLauncher extends FormApplication {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
@@ -30,16 +30,7 @@ class EASettingsLauncher extends FormApplication {
     });
     root.querySelector("[data-ea-reset]")?.addEventListener("click", async event => {
       event.preventDefault();
-      const confirmed = await Dialog.confirm({
-        title: "Сбросить данные алхимии",
-        content: "<p>Будут удалены настройки алхимии этого мира: выбранные персонажи, территории, цели, история сбора и все добавленные пользователем рецепты. Базовые рецепты будут восстановлены. Ингредиенты в инвентарях персонажей и записи библиотеки трав не удаляются.</p><p><b>Это действие нельзя отменить.</b></p>",
-        yes: () => true,
-        no: () => false,
-        defaultYes: false
-      });
-      if (!confirmed) return;
-      await game.settings.set(EA.id, "state", EA.defaults());
-      ui.notifications.info("Данные Malcal's ExtraAlchemy сброшены к значениям по умолчанию.");
+      await EA.resetAllData();
       this.render(true);
     });
   }
