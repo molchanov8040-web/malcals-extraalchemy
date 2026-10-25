@@ -11,7 +11,6 @@
   const macroFlag = "ready-potion-script";
   const packId = name => `world.${name}`;
 
-  // Clean, single-slot version of the supplied lyrium script.
   // One point restores one first-level spell slot, if one is expended.
   const lyriumScript = `const actor = args?.[0]?.actor ?? this.actor ?? game.user.character ?? canvas.tokens.controlled[0]?.actor;
 if (!actor) return ui.notifications.warn("Не удалось определить персонажа.");
@@ -21,7 +20,7 @@ const current = Number(spell.value ?? 0);
 const maximum = Number(spell.max ?? 0);
 if (current >= maximum) return ui.notifications.info("Ячейка первого круга уже восстановлена.");
 await actor.update({ "system.spells.spell1.value": current + 1 });
-ui.notifications.info(60${actor.name} восстановил одну ячейку заклинаний первого круга.0);`;
+ui.notifications.info(actor.name + " восстановил одну ячейку заклинаний первого круга.");`;
 
   const potionSeeds = () => [
     {
