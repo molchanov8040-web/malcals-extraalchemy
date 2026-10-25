@@ -96,6 +96,77 @@ ui.notifications.info(actor.name + " восстановил одну ячейк�
     await seedPotionPack(macro);
   };
 
+  // Crafting yields the actual compendium Item when the recipe output name matches.
+  const baseResolveBrew = E.resolveBrew;
+  E.resolveBrew = async request => {
+    const s = E.getState();
+    const user = game.users.get(request?.userId);
+    const actor = game.actors.get(request?.actorId);
+    const recipe = s.recipes.find(entry => entry.id === request?.recipeId);
+    const ingredients = (request?.ingredients || []).map(entry => ({
+      ingredientId: entry.ingredientId,
+      quantity: Math.max(1, Math.floor(Number(entry.quantity) || 1))
+    }));
+    if (!user || !actor || !E.canActor(user, actor, s)) throw new Error("Нет доступа к персонажу.");
+    if (!recipe) throw new Error("Рецепт не найден.");
+    if (!user.isGM && !recipe.playersKnow) throw new Error("Рецепт неизвестен игрокам.");
+    if (!ingredients.length || !E.matches(recipe, E.total(s, ingredients))) throw new Error("Недостаточно известных аспектов.");
+
+    const output = recipe.output || {};
+    const resultName = String(output.itemName || recipe.name).trim();
+    const pack = game.packs.get(packId(PACKS.potions));
+    let matchingPotion = null;
+    if (pack) {
+      const index = await pack.getIndex({ fields: ["name"] });
+      const indexed = index.find(entry => entry.name.trim().toLocaleLowerCase() === resultName.toLocaleLowerCase());
+      if (indexed) matchingPotion = await pack.getDocument(indexed._id);
+    }
+
+    if (output.requireCompendiumPotion && !matchingPotion) {
+      throw new Error(`В компендиуме «Готовые зелья» нет предмета «${resultName}». Ингредиенты не списаны.`);
+    }
+
+    for (const ingredient of ingredients) E.take(s, ingredient.ingredientId, ingredient.quantity);
+    const success = Number(request.total) >= Number(recipe.brewDC);
+    let message = "Провал: ингредиенты израсходованы.";
+    if (success) {
+      const quantity = Math.max(1, Number(Number(request.total) >= Number(recipe.brewDC) + 5 ? output.criticalQuantity : output.quantity) || 1);
+      let itemData;
+      if (matchingPotion) {
+        itemData = matchingPotion.toObject();
+        delete itemData._id;
+        delete itemData.folder;
+        delete itemData.sort;
+        delete itemData.ownership;
+        delete itemData._stats;
+        itemData.system = foundry.utils.deepClone(itemData.system || {});
+        itemData.system.quantity = quantity;
+        const flags = foundry.utils.deepClone(itemData.flags || {});
+        foundry.utils.setProperty(flags, `${E.id}.craftedFrom`, { recipeId: recipe.id, recipeName: recipe.name });
+        itemData.flags = flags;
+        await actor.createEmbeddedDocuments("Item", [itemData]);
+        message = `Успех: создан предмет «${matchingPotion.name}» из компендиума «Готовые зелья» × ${quantity}.`;
+      } else {
+        const name = output.itemName || recipe.name;
+        await actor.createEmbeddedDocuments("Item", [{
+          name,
+          type: "consumable",
+          img: "icons/consumables/potions/bottle-round-corked-red.webp",
+          system: {
+            quantity,
+            type: { value: "potion" },
+            description: { value: `<p>${E.esc(recipe.description || "Алхимический состав.")}</p>` }
+          },
+          flags: { [E.id]: { recipeId: recipe.id } }
+        }]);
+        message = `Успех: создано «${name}» × ${quantity}.`;
+      }
+    }
+    s.group.brewHistory.unshift({ id: foundry.utils.randomID(), timestamp: Date.now(), actorName: actor.name, recipeId: recipe.id, recipeName: recipe.name, total: Number(request.total) || 0, dc: recipe.brewDC, success, ingredients });
+    await E.commit(s);
+    return { message };
+  };
+
   Hooks.once("ready", async () => {
     if (!game.user.isGM) return;
     try {
