@@ -3,109 +3,49 @@
   const E = globalThis.EA;
   if (!E) return;
 
-  const PACKS = {
-    potions: "malcals-extraalchemy-potions",
-    scripts: "malcals-extraalchemy-potion-scripts"
-  };
+  const PACKS = { potions: "malcals-extraalchemy-potions", scripts: "malcals-extraalchemy-potion-scripts" };
   const POTION_FLAG = "ready-potion";
   const MACRO_FLAG = "ready-potion-script";
   const worldPackId = name => `world.${name}`;
-
   const normalizeName = name => String(name ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase();
   const esc = value => E.esc ? E.esc(value) : String(value ?? "").replace(/[&<>\"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char]));
 
   const potionSeeds = () => [
-    {
-      id: "small-healing-poultice",
-      name: "Малая целебная припарка",
-      img: "modules/malcals-extraalchemy/assets/images/potions/small-healing-poultice.webp",
-      description: "<blockquote><p>Припарка для лечения незначительных порезов и ушибов.</p></blockquote><p>Восстанавливает <b>2d4 + 2 ПЗ</b>.</p><p>Использование: бонусное действие. Предмет расходуется после применения.</p>",
-      kind: "healing",
-      healing: { number: 2, denomination: 4, bonus: "2" }
-    },
-    {
-      id: "healing-poultice",
-      name: "Целебная припарка",
-      img: "modules/malcals-extraalchemy/assets/images/potions/healing-poultice.webp",
-      description: "<blockquote><p>Целебная припарка для серьёзных ран.</p></blockquote><p>Восстанавливает <b>4d4 + 4 ПЗ</b>.</p><p>Использование: бонусное действие. Предмет расходуется после применения.</p>",
-      kind: "healing",
-      healing: { number: 4, denomination: 4, bonus: "4" }
-    },
-    {
-      id: "large-healing-poultice",
-      name: "Большая целебная припарка",
-      img: "modules/malcals-extraalchemy/assets/images/potions/large-healing-poultice.webp",
-      description: "<blockquote><p>Большая припарка, пропитанная концентрированным лечебным составом.</p></blockquote><p>Восстанавливает <b>8d4 + 8 ПЗ</b>.</p><p>Использование: бонусное действие. Предмет расходуется после применения.</p>",
-      kind: "healing",
-      healing: { number: 8, denomination: 4, bonus: "8" }
-    },
-    {
-      id: "strong-healing-poultice",
-      name: "Сильная целебная припарка",
-      img: "modules/malcals-extraalchemy/assets/images/potions/strong-healing-poultice.webp",
-      description: "<blockquote><p>Сильная целебная припарка для тяжёлых ранений.</p></blockquote><p>Восстанавливает <b>10d4 + 20 ПЗ</b>.</p><p>Использование: бонусное действие. Предмет расходуется после применения.</p>",
-      kind: "healing",
-      healing: { number: 10, denomination: 4, bonus: "20" }
-    },
-    {
-      id: "minor-lyrium-potion",
-      name: "Малое Зелье лириума",
-      img: "modules/malcals-extraalchemy/assets/images/potions/minor-lyrium-potion.webp",
-      description: "<blockquote><p>Малое зелье лириума.</p></blockquote><p>Восстанавливает <b>1 круг заклинаний</b>.</p>",
-      kind: "lyrium",
-      restoredSlots: 1
-    },
-    {
-      id: "ordinary-lyrium-potion",
-      name: "Обычное Зелье лириума",
-      img: "modules/malcals-extraalchemy/assets/images/potions/ordinary-lyrium-potion.webp",
-      description: "<blockquote><p>Обычное зелье лириума.</p></blockquote><p>Восстанавливает <b>2 круга заклинаний</b>.</p>",
-      kind: "lyrium",
-      restoredSlots: 2
-    },
-    {
-      id: "large-lyrium-potion",
-      name: "Большое Зелье лириума",
-      img: "modules/malcals-extraalchemy/assets/images/potions/large-lyrium-potion.webp",
-      description: "<blockquote><p>Большое зелье лириума.</p></blockquote><p>Восстанавливает <b>3 круга заклинаний</b>.</p>",
-      kind: "lyrium",
-      restoredSlots: 3
-    },
-    {
-      id: "potent-lyrium-potion",
-      name: "Сильнодействующее Зелье лириума",
-      img: "modules/malcals-extraalchemy/assets/images/potions/potent-lyrium-potion.webp",
-      description: "<blockquote><p>Сильнодействующее зелье лириума.</p></blockquote><p>Восстанавливает <b>5 кругов заклинаний</b>.</p>",
-      kind: "lyrium",
-      restoredSlots: 5
-    }
+    { id: "small-healing-poultice", name: "Малая целебная припарка", img: "modules/malcals-extraalchemy/assets/images/potions/small-healing-poultice.webp", description: "<blockquote><p>Припарка для лечения незначительных порезов и ушибов.</p></blockquote><p>Восстанавливает <b>2d4 + 2 ПЗ</b>.</p><p>Использование: бонусное действие. Предмет расходуется после применения.</p>", kind: "healing", healing: { number: 2, denomination: 4, bonus: "2" } },
+    { id: "healing-poultice", name: "Целебная припарка", img: "modules/malcals-extraalchemy/assets/images/potions/healing-poultice.webp", description: "<blockquote><p>Целебная припарка для серьёзных ран.</p></blockquote><p>Восстанавливает <b>4d4 + 4 ПЗ</b>.</p><p>Использование: бонусное действие. Предмет расходуется после применения.</p>", kind: "healing", healing: { number: 4, denomination: 4, bonus: "4" } },
+    { id: "large-healing-poultice", name: "Большая целебная припарка", img: "modules/malcals-extraalchemy/assets/images/potions/large-healing-poultice.webp", description: "<blockquote><p>Большая припарка, пропитанная концентрированным лечебным составом.</p></blockquote><p>Восстанавливает <b>8d4 + 8 ПЗ</b>.</p><p>Использование: бонусное действие. Предмет расходуется после применения.</p>", kind: "healing", healing: { number: 8, denomination: 4, bonus: "8" } },
+    { id: "strong-healing-poultice", name: "Сильная целебная припарка", img: "modules/malcals-extraalchemy/assets/images/potions/strong-healing-poultice.webp", description: "<blockquote><p>Сильная целебная припарка для тяжёлых ранений.</p></blockquote><p>Восстанавливает <b>10d4 + 20 ПЗ</b>.</p><p>Использование: бонусное действие. Предмет расходутся после применения.</p>", kind: "healing", healing: { number: 10, denomination: 4, bonus: "20" } },
+    { id: "minor-lyrium-potion", name: "Малое Зелье лириума", img: "modules/malcals-extraalchemy/assets/images/potions/minor-lyrium-potion.webp", description: "<blockquote><p>Малое зелье лириума.</p></blockquote><p>Восстанавливает запас в <b>1 круг</b> для восстановления ячеек заклинаний.</p>", kind: "lyrium", restoredSlots: 1 },
+    { id: "ordinary-lyrium-potion", name: "Обычное Зелье лириума", img: "modules/malcals-extraalchemy/assets/images/potions/ordinary-lyrium-potion.webp", description: "<blockquote><p>Обычное зелье лириума.</p></blockquote><p>Восстанавливает запас в <b>2 круга</b> для восстановления ячеек заклинаний.</p>", kind: "lyrium", restoredSlots: 2 },
+    { id: "large-lyrium-potion", name: "Большое Зелье лириума", img: "modules/malcals-extraalchemy/assets/images/potions/large-lyrium-potion.webp", description: "<blockquote><p>Большое зелье лириума.</p></blockquote><p>Восстанавливает запас в <b>3 круга</b> для восстановления ячеек заклинаний.</p>", kind: "lyrium", restoredSlots: 3 },
+    { id: "potent-lyrium-potion", name: "Сильнодействующее Зелье лириума", img: "modules/malcals-extraalchemy/assets/images/potions/potent-lyrium-potion.webp", description: "<blockquote><p>Сильнодействующее зелье лириума.</p></blockquote><p>Восстанавливает запас в <b>5 кругов</b> для восстановления ячеек заклинаний.</p>", kind: "lyrium", restoredSlots: 5 }
   ];
 
   const lyriumScript = restoredSlots => `const workflow = typeof args !== "undefined" ? (Array.isArray(args) ? args[0] : args) : null;
 const actor = workflow?.actor ?? this?.actor ?? game.user.character ?? canvas.tokens.controlled[0]?.actor;
-const amount = ${Number(restoredSlots) || 1};
+let pointsLeft = ${Number(restoredSlots) || 1};
 if (!actor) return ui.notifications.warn("Не удалось определить персонажа.");
 const spells = actor.system.spells;
 if (!spells) return ui.notifications.warn("У персонажа нет данных о ячейках заклинаний.");
-
 const updates = {};
-let remaining = amount;
 const restored = [];
 for (const level of [1, 2, 3, 4, 5, 6, 7, 8, 9]) {
-  if (remaining <= 0) break;
-  const key = \`spell\${level}\`;
+  if (pointsLeft <= 0) break;
+  const key = "spell" + level;
   const slot = spells[key];
   if (!slot) continue;
-  const current = Number(slot.value ?? 0);
-  const maximum = Number(slot.max ?? 0);
+  const current = Number(slot.value ?? 0), maximum = Number(slot.max ?? 0);
   if (current >= maximum) continue;
-  updates[\`system.spells.\${key}.value\`] = current + 1;
-  restored.push(\`\${level}-го круга\`);
-  remaining -= 1;
+  const missing = maximum - current;
+  const canRestore = Math.min(missing, Math.floor(pointsLeft / level));
+  if (canRestore < 1) continue;
+  updates["system.spells." + key + ".value"] = current + canRestore;
+  restored.push(canRestore + " ячеек " + level + " круга");
+  pointsLeft -= canRestore * level;
 }
-if (!restored.length) return ui.notifications.info("Все ячейки заклинаний уже восстановлены.");
+if (!restored.length) return ui.notifications.info("Нет потраченных ячеек, которые можно восстановить за имеющееся число кругов.");
 await actor.update(updates);
-ui.notifications.info(\`\${actor.name}: восстановлены ячейки \${restored.join(", ")}.\`);`;
+ui.notifications.info(actor.name + ": восстановлено " + restored.join(", ") + ". Осталось кругов: " + pointsLeft);`;
 
   const makePack = async (name, label, type) => {
     let pack = game.packs.get(worldPackId(name));
@@ -117,99 +57,32 @@ ui.notifications.info(\`\${actor.name}: восстановлены ячейки 
   };
 
   const itemDataFor = (seed, macro) => {
-    const activityId = foundry.utils.randomID(16);
-    const healing = seed.healing;
-    const activities = seed.kind === "healing" ? {
-      [activityId]: {
-        _id: activityId,
-        type: "heal",
-        name: "Лечение",
-        img: null,
-        activation: { type: "bonus", value: 1, condition: "", override: false },
-        consumption: {
-          targets: [{ type: "itemUses", value: "1", target: "", scaling: {} }],
-          scaling: { allowed: false, max: "" },
-          spellSlot: true
-        },
-        description: { chatFlavor: seed.name },
-        duration: { concentration: false, value: "", units: "inst", special: "", override: false },
-        effects: [],
-        range: { units: "any", special: "", override: false },
-        target: {
-          template: { count: "", contiguous: false, type: "", size: "", width: "", height: "", units: "ft", stationary: false },
-          affects: { count: "1", type: "creature", choice: false, special: "" },
-          prompt: true,
-          override: false
-        },
-        uses: { spent: 0, max: "", recovery: [] },
-        healing: {
-          number: healing.number,
-          denomination: healing.denomination,
-          bonus: healing.bonus,
-          types: ["healing"],
-          custom: { enabled: false, formula: "" },
-          scaling: { mode: "whole", number: null, formula: "" }
-        },
-        sort: 0,
-        flags: {},
-        visibility: { level: {}, requireAttunement: false, requireIdentification: false, requireMagic: false },
-        useConditionText: "",
-        useConditionReason: "",
-        effectConditionText: "",
-        otherActivityId: null,
-        macroData: { name: "", command: "" },
-        midiProperties: {
-          ignoreTraits: [], triggeredActivityId: "none", triggeredActivityConditionText: "",
-          triggeredActivityTargets: "targets", triggeredActivityRollAs: "self", triggeredActivityConsume: true,
-          triggeredActivityConfigure: true, autoConsume: false, forceConsumeDialog: "default",
-          forceRollDialog: "default", forceDamageDialog: "default", confirmTargets: "default",
-          autoTargetType: "any", autoTargetAction: "default", automationOnly: false,
-          otherActivityCompatible: true, otherActivityAsParentType: true, identifier: "",
-          displayActivityName: false, rollMode: "default", chooseEffects: false, toggleEffect: false,
-          ignoreFullCover: false, removeChatButtons: "default", magicEffect: false, magicDamage: false,
-          noConcentrationCheck: false, skipConcentrationCheck: false, autoCEEffects: "default"
-        }
-      }
-    } : {};
-
-    const macroName = macro?.name ?? "";
+    const activityId = foundry.utils.randomID(16), h = seed.healing;
+    const activities = seed.kind === "healing" ? { [activityId]: {
+      _id: activityId, type: "heal", name: "Лечение", img: null,
+      activation: { type: "bonus", value: 1, condition: "", override: false },
+      consumption: { targets: [{ type: "itemUses", value: "1", target: "", scaling: {} }], scaling: { allowed: false, max: "" }, spellSlot: true },
+      description: { chatFlavor: seed.name }, duration: { concentration: false, value: "", units: "inst", special: "", override: false }, effects: [],
+      range: { units: "any", special: "", override: false },
+      target: { template: { count: "", contiguous: false, type: "", size: "", width: "", height: "", units: "ft", stationary: false }, affects: { count: "1", type: "creature", choice: false, special: "" }, prompt: true, override: false },
+      uses: { spent: 0, max: "", recovery: [] },
+      healing: { number: h.number, denomination: h.denomination, bonus: h.bonus, types: ["healing"], custom: { enabled: false, formula: "" }, scaling: { mode: "whole", number: null, formula: "" } },
+      sort: 0, flags: {}, visibility: { level: {}, requireAttunement: false, requireIdentification: false, requireMagic: false },
+      useConditionText: "", useConditionReason: "", effectConditionText: "", otherActivityId: null, macroData: { name: "", command: "" },
+      midiProperties: { ignoreTraits: [], triggeredActivityId: "none", triggeredActivityConditionText: "", triggeredActivityTargets: "targets", triggeredActivityRollAs: "self", triggeredActivityConsume: true, triggeredActivityConfigure: true, autoConsume: false, forceConsumeDialog: "default", forceRollDialog: "default", forceDamageDialog: "default", confirmTargets: "default", autoTargetType: "any", autoTargetAction: "default", automationOnly: false, otherActivityCompatible: true, otherActivityAsParentType: true, identifier: "", displayActivityName: false, rollMode: "default", chooseEffects: false, toggleEffect: false, ignoreFullCover: false, removeChatButtons: "default", magicEffect: false, magicDamage: false, noConcentrationCheck: false, skipConcentrationCheck: false, autoCEEffects: "default" }
+    } } : {};
     return {
-      name: seed.name,
-      type: "consumable",
-      img: seed.img,
+      name: seed.name, type: "consumable", img: seed.img,
       system: {
-        description: { value: seed.description, chat: "" },
-        source: { custom: "Malcal's ExtraAlchemy", revision: 1, rules: "2014", book: "" },
-        identified: true,
-        unidentified: { description: "" },
-        container: null,
-        quantity: 1,
-        weight: { value: 0.2, units: "lb" },
-        price: { value: 10, denomination: "gp" },
-        rarity: "common",
-        attunement: "",
+        description: { value: seed.description, chat: "" }, source: { custom: "Malcal's ExtraAlchemy", revision: 1, rules: "2014", book: "" },
+        identified: true, unidentified: { description: "" }, container: null, quantity: 1, weight: { value: 0.2, units: "lb" }, price: { value: 10, denomination: "gp" }, rarity: "common", attunement: "",
         uses: { spent: 0, max: "1", autoDestroy: true, recovery: [] },
-        damage: {
-          base: {
-            number: seed.kind === "healing" ? healing.number : null,
-            denomination: seed.kind === "healing" ? healing.denomination : null,
-            bonus: seed.kind === "healing" ? healing.bonus : "",
-            types: seed.kind === "healing" ? ["healing"] : [],
-            custom: { enabled: false, formula: "" },
-            scaling: { mode: "", number: null, formula: "" }
-          },
-          replace: false
-        },
-        type: { value: "potion", subtype: "" },
-        properties: [],
-        activities,
-        identifier: seed.id,
-        attuned: false,
-        equipped: false
+        damage: { base: { number: seed.kind === "healing" ? h.number : null, denomination: seed.kind === "healing" ? h.denomination : null, bonus: seed.kind === "healing" ? h.bonus : "", types: seed.kind === "healing" ? ["healing"] : [], custom: { enabled: false, formula: "" }, scaling: { mode: "", number: null, formula: "" } }, replace: false },
+        type: { value: "potion", subtype: "" }, properties: [], activities, identifier: seed.id, attuned: false, equipped: false
       },
       flags: {
         [E.id]: { [POTION_FLAG]: { id: seed.id, kind: seed.kind, restoredSlots: seed.restoredSlots ?? 0 } },
-        ...(seed.kind === "lyrium" && macro ? { "midi-qol": { onUseMacroName: `[postActiveEffects]${macroName}[${macro.uuid}]` } } : {})
+        ...(seed.kind === "lyrium" && macro ? { "midi-qol": { onUseMacroName: `[postActiveEffects]${macro.name}[${macro.uuid}]` } } : {})
       }
     };
   };
@@ -217,26 +90,14 @@ ui.notifications.info(\`\${actor.name}: восстановлены ячейки 
   const seedMacroPack = async () => {
     const pack = await makePack(PACKS.scripts, "Скрипты зелий", "Macro");
     if (!pack) return new Map();
-    const docs = await pack.getDocuments();
-    const result = new Map();
-    for (const seed of potionSeeds().filter(entry => entry.kind === "lyrium")) {
+    const docs = await pack.getDocuments(), result = new Map();
+    for (const seed of potionSeeds().filter(x => x.kind === "lyrium")) {
       const macroId = `${seed.id}-restore`;
-      const name = `${seed.name} — восстановить ${seed.restoredSlots} круг${seed.restoredSlots === 1 ? "" : seed.restoredSlots < 5 ? "а" : "ов"}`;
+      const name = `${seed.name} — восстановить ${seed.restoredSlots} круг(а/ов)`;
       const command = lyriumScript(seed.restoredSlots);
       let macro = docs.find(d => d.getFlag(E.id, MACRO_FLAG)?.id === macroId);
-      if (!macro) {
-        [macro] = await pack.documentClass.createDocuments([{
-          name,
-          type: "script",
-          img: "icons/svg/dice-target.svg",
-          command,
-          scope: "global",
-          ownership: { default: 0 },
-          flags: { [E.id]: { [MACRO_FLAG]: { id: macroId, potionId: seed.id, restoredSlots: seed.restoredSlots } } }
-        }], { pack: pack.collection });
-      } else if (macro.command !== command || macro.name !== name) {
-        await macro.update({ command, name });
-      }
+      if (!macro) [macro] = await pack.documentClass.createDocuments([{ name, type: "script", img: "icons/svg/dice-target.svg", command, scope: "global", ownership: { default: 0 }, flags: { [E.id]: { [MACRO_FLAG]: { id: macroId, potionId: seed.id, restoredSlots: seed.restoredSlots } } } }], { pack: pack.collection });
+      else if (macro.command !== command || macro.name !== name) await macro.update({ command, name });
       result.set(seed.id, macro);
     }
     return result;
@@ -265,87 +126,55 @@ ui.notifications.info(\`\${actor.name}: восстановлены ячейки 
     for (const pack of game.packs) {
       if (pack.documentName !== "Item") continue;
       const index = await pack.getIndex({ fields: ["name"] });
-      for (const entry of index) {
-        if (normalizeName(entry.name) !== normalizeName(name)) continue;
+      for (const entry of index) if (normalizeName(entry.name) === normalizeName(name)) {
         const document = await pack.getDocument(entry._id);
         if (document) matches.push({ pack, document });
       }
     }
     return matches;
   };
-
   const sourceInfo = pack => {
-    const metadata = pack?.metadata ?? {};
-    const packageId = metadata.packageName ?? metadata.packageId ?? metadata.package;
+    const m = pack?.metadata ?? {}, packageId = m.packageName ?? m.packageId ?? m.package;
     const module = packageId && packageId !== "world" ? game.modules.get(packageId) : null;
-    const moduleName = module?.title || (packageId && packageId !== "world" ? packageId : null);
-    const packName = metadata.label || metadata.name || pack?.collection || "неизвестный компендиум";
-    return { moduleName, packName };
+    return { moduleName: module?.title || (packageId && packageId !== "world" ? packageId : null), packName: m.label || m.name || pack?.collection || "неизвестный компендиум" };
   };
+  const whisperGMs = async content => ChatMessage.create({ speaker: { alias: "Алхимия" }, content, whisper: game.users.filter(u => u.isGM).map(u => u.id) });
 
-  const whisperGMs = async content => {
-    const recipients = game.users.filter(user => user.isGM).map(user => user.id);
-    await ChatMessage.create({ speaker: { alias: "Алхимия" }, content, whisper: recipients });
-  };
-
-  const baseResolveBrew = E.resolveBrew;
   E.resolveBrew = async request => {
-    const state = E.getState();
-    const user = game.users.get(request?.userId);
-    const actor = game.actors.get(request?.actorId);
-    const recipe = state.recipes.find(entry => entry.id === request?.recipeId);
-    const ingredients = (request?.ingredients || []).map(entry => ({
-      ingredientId: entry.ingredientId,
-      quantity: Math.max(1, Math.floor(Number(entry.quantity) || 1))
-    }));
+    const state = E.getState(), user = game.users.get(request?.userId), actor = game.actors.get(request?.actorId), recipe = state.recipes.find(x => x.id === request?.recipeId);
+    const ingredients = (request?.ingredients || []).map(x => ({ ingredientId: x.ingredientId, quantity: Math.max(1, Math.floor(Number(x.quantity) || 1)) }));
     if (!user || !actor || !E.canActor(user, actor, state)) throw new Error("Нет доступа к персонажу.");
     if (!recipe) throw new Error("Рецепт не найден.");
     if (!user.isGM && !recipe.playersKnow) throw new Error("Рецепт неизвестен игрокам.");
     if (!ingredients.length || !E.matches(recipe, E.total(state, ingredients))) throw new Error("Недостаточно известных аспектов.");
-
-    const success = Number(request.total) >= Number(recipe.brewDC);
-    const output = recipe.output || {};
-    const resultName = String(output.itemName || recipe.name).trim();
+    const success = Number(request.total) >= Number(recipe.brewDC), output = recipe.output || {}, resultName = String(output.itemName || recipe.name).trim();
     let source = null;
     if (success) {
       const candidates = await findNamedItems(resultName);
       if (candidates.length > 1) {
         const list = candidates.map(({ pack, document }) => `<li><b>${esc(pack.metadata.label || pack.collection)}</b>: ${esc(document.name)} — <code>${esc(document.uuid)}</code></li>`).join("");
-        await whisperGMs(`<h3>Неоднозначный предмет при изготовлении</h3><p>Для рецепта «${esc(recipe.name)}» найдено несколько предметов с именем «${esc(resultName)}». Ингредиенты не списаны; уточните источник предмета или устраните дубликаты.</p><ul>${list}</ul>`);
-        throw new Error(`Найдено несколько предметов «${resultName}». ГМ получил список совпадений в чат; ингредиенты не списаны.`);
+        await whisperGMs(`<h3>Неоднозначный предмет при изготовлении</h3><p>Для рецепта «${esc(recipe.name)}» найдено несколько предметов «${esc(resultName)}». Ингредиенты не списаны.</p><ul>${list}</ul>`);
+        throw new Error(`Найдено несколько предметов «${resultName}». ГМ получил список совпадений; ингредиенты не списаны.`);
       }
       if (candidates.length === 1) source = candidates[0];
-      else if (output.requireCompendiumPotion) {
-        throw new Error(`Предмет «${resultName}» не найден в доступных компендиумах. Ингредиенты не списаны.`);
-      }
+      else if (output.requireCompendiumPotion) throw new Error(`Предмет «${resultName}» не найден. Ингредиенты не списаны.`);
     }
-
     for (const ingredient of ingredients) E.take(state, ingredient.ingredientId, ingredient.quantity);
     let message = "Провал: ингредиенты израсходованы, предмет не создан.";
     if (success) {
       const quantity = Math.max(1, Number(Number(request.total) >= Number(recipe.brewDC) + 5 ? output.criticalQuantity : output.quantity) || 1);
-      let itemData;
       if (source) {
-        itemData = source.document.toObject();
+        const itemData = source.document.toObject();
         for (const key of ["_id", "folder", "sort", "ownership", "_stats"]) delete itemData[key];
-        itemData.system = foundry.utils.deepClone(itemData.system || {});
-        itemData.system.quantity = quantity;
+        itemData.system = foundry.utils.deepClone(itemData.system || {}); itemData.system.quantity = quantity;
         itemData.flags = foundry.utils.deepClone(itemData.flags || {});
         foundry.utils.setProperty(itemData.flags, `${E.id}.craftedFrom`, { recipeId: recipe.id, recipeName: recipe.name });
         await actor.createEmbeddedDocuments("Item", [itemData]);
         const origin = sourceInfo(source.pack);
-        message = origin.moduleName
-          ? `Успех: создан предмет «${source.document.name}» из модуля «${esc(origin.moduleName)}» — компендиум «${esc(origin.packName)}» × ${quantity}.`
-          : `Успех: создан предмет «${source.document.name}» из компендиума «${esc(origin.packName)}» × ${quantity}.`;
+        message = origin.moduleName ? `Успех: создан предмет «${source.document.name}» из модуля «${esc(origin.moduleName)}» — компендиум «${esc(origin.packName)}» × ${quantity}.` : `Успех: создан предмет «${source.document.name}» из компендиума «${esc(origin.packName)}» × ${quantity}.`;
       } else {
         const name = output.itemName || recipe.name;
-        await actor.createEmbeddedDocuments("Item", [{
-          name,
-          type: "consumable",
-          img: "icons/consumables/potions/bottle-round-corked-red.webp",
-          system: { quantity, type: { value: "potion" }, description: { value: `<p>${esc(recipe.description || "Алхимический состав.")}</p>` } },
-          flags: { [E.id]: { recipeId: recipe.id } }
-        }]);
+        await actor.createEmbeddedDocuments("Item", [{ name, type: "consumable", img: "icons/consumables/potions/bottle-round-corked-red.webp", system: { quantity, type: { value: "potion" }, description: { value: `<p>${esc(recipe.description || "Алхимический состав.")}</p>` } }, flags: { [E.id]: { recipeId: recipe.id } } }]);
         message = `Успех: создано «${esc(name)}» × ${quantity}.`;
       }
     }
@@ -356,11 +185,7 @@ ui.notifications.info(\`\${actor.name}: восстановлены ячейки 
 
   Hooks.once("ready", async () => {
     if (!game.user.isGM) return;
-    try {
-      await E.ensurePotionLibraries();
-      console.info(`${E.id} | Ready-potion compendia initialized.`);
-    } catch (error) {
-      console.error(`${E.id} | Ready-potion compendium setup failed`, error);
-    }
+    try { await E.ensurePotionLibraries(); console.info(`${E.id} | Ready-potion compendia initialized.`); }
+    catch (error) { console.error(`${E.id} | Ready-potion compendium setup failed`, error); }
   });
 })();
