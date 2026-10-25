@@ -1,14 +1,14 @@
 {
   "id": "malcals-extraalchemy",
   "title": "Malcal's ExtraAlchemy",
-  "description": "Herb gathering, ingredient research, recipes, potion crafting, and a GM herb library for Foundry VTT 13.",
-  "version": "0.3.2",
+  "description": "Herb gathering, shared group stock, ingredient research, recipes, potion crafting, and a GM herb library for Foundry VTT 13.",
+  "version": "0.4.0",
   "compatibility": { "minimum": "13", "verified": "13.351" },
   "authors": [{ "name": "Malcal" }],
   "url": "https://github.com/molchanov8040-web/malcals-extraalchemy",
   "manifest": "https://raw.githubusercontent.com/molchanov8040-web/malcals-extraalchemy/main/module.json",
   "download": "https://github.com/molchanov8040-web/malcals-extraalchemy/archive/refs/heads/main.zip",
-  "esmodules": ["scripts/extraalchemy.js", "scripts/library-v13.js", "scripts/recipes-ui.js", "scripts/workflow-v13.js", "scripts/settings-menu-v13.js", "scripts/fixes-v13.js"],
+  "esmodules": ["scripts/extraalchemy.js", "scripts/library-v13.js", "scripts/recipes-ui.js", "scripts/workflow-v13.js", "scripts/settings-menu-v13.js", "scripts/fixes-v13.js", "scripts/group-workflow-v13.js"],
   "styles": ["styles/extraalchemy.css"],
   "languages": [{ "lang": "ru", "name": "Русский", "path": "lang/ru.json" }, { "lang": "en", "name": "English", "path": "lang/en.json" }],
   "relationships": { "systems": [{ "id": "dnd5e", "type": "system" }], "requires": [], "recommends": [{ "id": "midi-qol", "type": "module" }] }
