@@ -44,6 +44,8 @@ ui.notifications.info(actor.name + " восстановил одну ячейк�
         scope: "global", ownership: { default: 0 },
         flags: { [E.id]: { [macroFlag]: { id: "minor-lyrium-restore-1", potionId: "minor-lyrium-potion", restoredSpellLevel: 1, restoredSlots: 1 } } }
       }], { pack: pack.collection });
+    } else if (macro.command !== lyriumScript) {
+      await macro.update({ command: lyriumScript, name: macroName });
     }
     return macro;
   };
@@ -54,7 +56,6 @@ ui.notifications.info(actor.name + " восстановил одну ячейк�
     const docs = await pack.getDocuments();
     for (const seed of potionSeeds()) {
       const existing = docs.find(d => d.getFlag(E.id, potionFlag)?.id === seed.id) ?? docs.find(d => d.name === seed.name);
-      // Fix prior invalid IDs and upgrade existing seeded entries without duplicating them.
       const activityId = foundry.utils.randomID(16);
       const activities = seed.kind === "healing" ? {
         [activityId]: {
@@ -81,7 +82,7 @@ ui.notifications.info(actor.name + " восстановил одну ячейк�
         },
         flags: {
           [E.id]: { [potionFlag]: { id: seed.id, kind: seed.kind, scriptCompendium: seed.kind === "lyrium" ? packId(PACKS.scripts) : null } },
-          ...(seed.kind === "lyrium" ? { "midi-qol": { onUseMacroName: `[postActiveEffects]${macroName}` } } : {})
+          ...(seed.kind === "lyrium" && macro ? { "midi-qol": { onUseMacroName: `[postActiveEffects]${macro.uuid}` } } : {})
         }
       };
       if (existing) await existing.update(item);
