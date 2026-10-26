@@ -1,4 +1,4 @@
-/* Fix the disabled ApplicationV2 gather action after selecting goals. */
+/* Make the ApplicationV2 gather action clickable; validation stays in the action handler. */
 (() => {
   const EA = globalThis.EA;
   if (!EA) return;
@@ -6,17 +6,8 @@
   const syncButton = (root) => {
     const panel = root?.querySelector?.('.ea-v2-gather-panel');
     const button = panel?.querySelector('[data-action="gather-start"]');
-    if (!button || button.dataset.gatherFix === 'bound') return;
-    button.dataset.gatherFix = 'bound';
-    const sync = () => {
-      if (!button.isConnected || button.disabled === false) return;
-      const hasGoals = panel.querySelectorAll('input[name="ea-v2-gather-goal"]:checked').length > 0;
-      if (hasGoals) button.removeAttribute('disabled');
-    };
-    panel.addEventListener('change', (event) => {
-      if (event.target?.matches?.('input[name="ea-v2-gather-goal"]')) sync();
-    });
-    sync();
+    if (!button) return;
+    if (!button.dataset.gathering) button.removeAttribute('disabled');
   };
 
   const observeApp = (app) => {
