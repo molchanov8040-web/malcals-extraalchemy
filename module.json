@@ -2,7 +2,7 @@
   "id": "malcals-extraalchemy",
   "title": "Malcal's ExtraAlchemy",
   "description": "Shared herb gathering, research and crafting tools for Foundry VTT 13.",
-  "version": "0.8.3.16",
+  "version": "0.8.3.17",
   "compatibility": { "minimum": "13", "verified": "13.351" },
   "authors": [{ "name": "Malcal" }],
   "url": "https://github.com/molchanov8040-web/malcals-extraalchemy",
@@ -22,7 +22,8 @@
     "scripts/appv2/aspect-settings-v2.js",
     "scripts/appv2/gather-button-fix-v2.js",
     "scripts/appv2/crafting-v2.js",
-    "scripts/appv2/recipe-images-and-aspects-v2.js"
+    "scripts/appv2/recipe-images-and-aspects-v2.js",
+    "scripts/appv2/default-images-v2.js"
   ],
   "styles": ["styles/extraalchemy.css", "styles/player-workspace-v13.css", "styles/appv2/player-app-v2.css", "styles/appv2/crafting-v2.css"],
   "languages": [
