@@ -25,7 +25,6 @@
     try {
       return await resolveResearch(request);
     } catch (error) {
-      // Return expected validation failures as a normal response; preserve unexpected failures for GM diagnostics.
       if (/Все аспекты этой травы уже известны/.test(error?.message || "")) {
         return { research: false, message: "Все аспекты этой травы уже известны. Трава не потрачена." };
       }
@@ -33,19 +32,27 @@
     }
   };
 
-  const runAsGM = async (type, request) => {
-    const user = game.users.get(request?.userId);
-    if (!user || !request?.requestId) throw new Error("Некорректный запрос алхимии.");
-    const prior = completed.get(request.requestId);
+  // Socketlib 1.1.x supplies the invoking user's id as the handler `this.userId`.
+  // Never authorize a request using a userId supplied by the calling client.
+  const runAsGM = async (type, request, callerId) => {
+    const user = callerId && game.users.get(callerId);
+    if (!user || !request?.requestId) throw new Error("Не удалось подтвердить пользователя или запрос.");
+    const key = `${callerId}:${request.requestId}`;
+    const prior = completed.get(key);
     if (prior) return prior;
+    const trustedRequest = { ...request, userId: callerId };
     let result;
-    if (type === "gather") result = await E.resolveGather(request);
-    else if (type === "research") result = await E.resolveResearch(request);
-    else if (type === "brew") result = await E.resolveBrew(request);
+    if (type === "gather") result = await E.resolveGather(trustedRequest);
+    else if (type === "research") result = await E.resolveResearch(trustedRequest);
+    else if (type === "brew") result = await E.resolveBrew(trustedRequest);
     else throw new Error("Неизвестная операция алхимии.");
-    remember(request.requestId, result);
+    remember(key, result);
     return result;
   };
+
+  const registerHandler = (name, type) => socket.register(name, function (request) {
+    return runAsGM(type, request, this?.userId);
+  });
 
   Hooks.once("socketlib.ready", () => {
     if (!game.modules.get("socketlib")?.active || !globalThis.socketlib) {
@@ -53,9 +60,9 @@
       return;
     }
     socket = globalThis.socketlib.registerModule(E.id);
-    socket.register("eaGather", request => runAsGM("gather", request));
-    socket.register("eaResearch", request => runAsGM("research", request));
-    socket.register("eaBrew", request => runAsGM("brew", request));
+    registerHandler("eaGather", "gather");
+    registerHandler("eaResearch", "research");
+    registerHandler("eaBrew", "brew");
     console.info(`${E.id} | Socketlib handlers registered.`);
   });
 
@@ -73,7 +80,6 @@
     }
     const packet = {
       ...request,
-      userId: game.user.id,
       requestId: foundry.utils.randomID()
     };
     try {
