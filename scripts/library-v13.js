@@ -1,26 +1,26 @@
 /* Herb catalogue and world compendium — Foundry VTT 13.351 */
-const EA = globalThis.EA;
+const EA=globalThis.EA;
 EA.libraryPackName="malcals-extraalchemy-herbs";EA.libraryPackId=`world.${EA.libraryPackName}`;EA.herbImagePath=file=>`modules/${EA.id}/assets/images/herbs/${file}`;EA.herbFlag=item=>item?.getFlag(EA.id,"library-herb")??null;
 EA.herbSeeds=()=>[
-["elfroot","Эльфийский корень","elfroot.webp","common",{Vita:2,Herba:1},["Лес","Равнины","Побережье"],["healing","roots"],"Распространённый лечебный корень. Основа припарок и зелий восстановления."],
-["royal-elfroot","Королевский эльфийский корень","royal-elfroot.webp","rare",{Vita:3,Herba:2,Praecantatio:1},["Лес","Руины"],["healing","magic"],"Редкий, насыщенный магией вариант эльфийского корня для сильного лечения."],
-["deep-mushroom","Глубинный гриб","deep-mushroom.webp","common",{Herba:1,Mortuus:1,Sensus:1},["Подземелье","Руины","Горы"],["fungi"],"Подземный гриб для лекарств, настоев чувств и токсинов."],
-["deathroot","Корень смерти","deathroot.webp","uncommon",{Venenum:2,Mortuus:1,Sensus:1},["Болото","Лес","Руины"],["poison","roots"],"Опасный корень для усыпляющих и ослабляющих ядов."],
-["lunatics-deathroot","Лунный корень смерти","lunatics-deathroot.webp","rare",{Venenum:1,Mortuus:2,Sensus:2},["Болото","Руины"],["poison","magic"],"Редкая разновидность для нервных и дезориентирующих ядов."],
-["blood-lotus","Кровавый лотос","blood-lotus.webp","uncommon",{Vita:1,Ignis:1,Venenum:1},["Болото","Побережье"],["poison","healing"],"Болотный цветок для боевых стимуляторов и агрессивных ядов."],
-["dawn-lotus","Рассветный лотос","dawn-lotus.webp","rare",{Vita:2,Aqua:1,Ignis:1},["Болото","Побережье"],["healing","resistance"],"Редкий лотос для лечения и согревающих составов."],
-["andraste-grace","Благословение Андрасте","andraste-grace.webp","uncommon",{Vita:1,Aqua:1,Sensus:2},["Равнины","Горы","Руины"],["healing","resistance"],"Цветок для очищающих, успокаивающих и противоядных смесей."],
-["embrium","Эмбриум","embrium.webp","uncommon",{Aqua:2,Vita:1,Praecantatio:1},["Лес","Болото"],["magic","healing"],"Влаголюбивая трава для магических и восстанавливающих зелий."],
-["spindleweed","Веретённая трава","spindleweed.webp","common",{Herba:2,Motus:1},["Лес","Равнины","Поселение"],["roots","healing"],"Волокниста трава для мазей, повязок и укрепляющих настоев."],
-["rashvine","Колючая лоза","rashvine.webp","uncommon",{Herba:1,Venenum:2,Motus:1},["Болото","Лес"],["poison"],"Раздражающая лоза — основа оружейных и контактных ядов."],
-["crystal-grace","Кристальная благодать","crystal-grace.webp","rare",{Aqua:1,Sensus:2,Praecantatio:1},["Горы","Подземелье"],["senses","magic"],"Растение для зелий наблюдательности и магического зрения."],
-["arbor-blessing","Благословение леса","arbor-blessing.webp","very-rare",{Vita:2,Herba:1,Praecantatio:2},["Лес"],["healing","magic"],"Древесный цветок для сильной регенерации и природной защиты."],
-["prophets-laurel","Лавр Пророка","prophets-laurel.webp","rare",{Sensus:2,Motus:1,Praecantatio:1},["Горы","Руины"],["senses","magic"],"Лист для концентрации, ясности чувств и предчувствий."],
-["vandal-aria","Вандальская ария","vandal-aria.webp","very-rare",{Venenum:2,Sensus:1,Praecantatio:1},["Руины","Болото"],["poison","magic"],"Магически изменённая трава для дезориентирующих токсинов."],
-["lyrium","Лириум","lyrium.webp","very-rare",{Praecantatio:3,Sensus:1,Terra:1},["Подземелье","Горы","Руины"],["magic"],"Редкий магический минерал для исключительных эликсиров; требует особого рецепта."]
-].map(([ingredientId,name,image,rarity,aspects,regions,goals,description])=>({ingredientId,name,image,rarity,aspects,regions,goals,description}));
-EA.herbDocumentData=seed=>({name:seed.name,type:"loot",img:EA.herbImagePath(seed.image),system:{quantity:1,weight:.1,price:{value:0,denomination:"gp"},description:{value:`<p>${EA.esc(seed.description)}</p><p><b>Редкость:</b> ${EA.esc(seed.rarity)}</p>`}},flags:{[EA.id]:{"library-herb":EA.clone(seed)}}});
+["elfroot","Эльфийский корень","elfroot.webp","common",{Vita:2,Herba:1},["Лес","Равнины","Побережье"],["healing"],"Распространённый лечебный корень. Основа припарок и зелий восстановления."],
+["royal-elfroot","Королевский эльфийский корень","royal-elfroot.webp","rare",{Vita:3,Herba:2,Praecantatio:1},["Лес","Руины"],["healing","rare_magic"],"Редкий, насыщенный магией вариант эльфийского корня для сильного лечения."],
+["deep-mushroom","Глубинный гриб","deep-mushroom.webp","common",{Herba:1,Mortuus:1,Sensus:1},["Подземелье","Руины","Горы"],["poisonous","rare_magic"],"Подземный гриб для лекарств, настоев чувств и токсинов."],
+["deathroot","Корень смерти","deathroot.webp","uncommon",{Venenum:2,Mortuus:1,Sensus:1},["Болото","Лес","Руины"],["poisonous"],"Опасный корень для усыпляющих и ослабляющих ядов."],
+["lunatics-deathroot","Лунный корень смерти","lunatics-deathroot.webp","rare",{Venenum:1,Mortuus:2,Sensus:2},["Болото","Руины"],["poisonous","rare_magic"],"Редкая разновидность для нервных и дезориентирующих ядов."],
+["blood-lotus","Кровавый лотос","blood-lotus.webp","uncommon",{Vita:1,Ignis:1,Venenum:1},["Болото","Побережье"],["poisonous","healing"],"Болотный цветок для боевых стимуляторов и агрессивных ядов."],
+["dawn-lotus","Рассветный лотос","dawn-lotus.webp","rare",{Vita:2,Aqua:1,Ignis:1},["Болото","Побережье"],["healing","elemental"],"Редкий лотос для лечения и согревающих составов."],
+["andraste-grace","Благословение Андрасте","andraste-grace.webp","uncommon",{Vita:1,Aqua:1,Sensus:2},["Равнины","Горы","Руины"],["healing"],"Цветок для очищающих, успокаивающих и противоядных смесей."],
+["embrium","Эмбриум","embrium.webp","uncommon",{Aqua:2,Vita:1,Praecantatio:1},["Лес","Болото"],["elemental","healing"],"Влаголюбивая трава для магических и восстанавливающих зелий."],
+["spindleweed","Веретённая трава","spindleweed.webp","common",{Herba:2,Motus:1},["Лес","Равнины","Поселение"],["healing"],"Волокниста трава для мазей, повязок и укрепляющих настоев."],
+["rashvine","Колючая лоза","rashvine.webp","uncommon",{Herba:1,Venenum:2,Motus:1},["Болото","Лес"],["poisonous"],"Раздражающая лоза — основа оружейных и контактных ядов."],
+["crystal-grace","Кристальная благодать","crystal-grace.webp","rare",{Aqua:1,Sensus:2,Praecantatio:1},["Горы","Подземелье"],["elemental","rare_magic"],"Растение для зелий наблюдательности и магического зрения."],
+["arbor-blessing","Благословение леса","arbor-blessing.webp","very-rare",{Vita:2,Herba:1,Praecantatio:2},["Лес"],["healing","rare_magic"],"Древесный цветок для сильной регенерации и природной защиты."],
+["prophets-laurel","Лавр Пророка","prophets-laurel.webp","rare",{Sensus:2,Motus:1,Praecantatio:1},["Горы","Руины"],["rare_magic"],"Лист для концентрации, ясности чувств и предчувствий."],
+["vandal-aria","Вандальская ария","vandal-aria.webp","very-rare",{Venenum:2,Sensus:1,Praecantatio:1},["Руины","Болото"],["poisonous","rare_magic"],"Магически изменённая трава для дезориентирующих токсинов."],
+["lyrium","Лириум","lyrium.webp","very-rare",{Praecantatio:3,Sensus:1,Terra:1},["Подземелье","Горы","Руины"],["elemental","rare_magic"],"Редкий магический минерал для исключительных эликсиров; требует особого рецепта."]
+].map(([ingredientId,name,image,rarity,aspects,regions,types,description])=>({ingredientId,name,image,rarity,aspects,regions,types,goals:types,description}));
+EA.herbDocumentData=seed=>({name:seed.name,type:"loot",img:EA.herbImagePath(seed.image),system:{quantity:1,weight:.1,price:{value:0,denomination:"gp"},description:{value:`<p>${EA.esc(seed.description)}</p><p><b>Редкость:</b> ${EA.esc(seed.rarity)}</p><p><b>Типы:</b> ${seed.types.map(x=>EA.goals.find(g=>g[0]===x)?.[1]||x).map(EA.esc).join(", ")}</p><p><b>Местности:</b> ${seed.regions.map(EA.esc).join(", ")}</p><p><b>Аспекты:</b> ${Object.entries(seed.aspects).map(([k,v])=>`${EA.esc(EA.aspects[k]||k)}: ${v}`).join(", ")}</p>`}},flags:{[EA.id]:{"library-herb":EA.clone(seed)}}});
 EA.ensureHerbLibrary=async()=>{let p=game.packs.get(EA.libraryPackId);if(!p&&game.user.isGM){const C=globalThis.CompendiumCollection??foundry.documents.collections.CompendiumCollection;p=await C.createCompendium({type:"Item",name:EA.libraryPackName,label:"Malcal's ExtraAlchemy — Травы и лириум",package:"world"});ui.compendium?.render(true)}return p??null};
 EA.seedLibrary=async()=>{if(!game.user.isGM)throw Error("Библиотека доступна только ГМ.");const p=await EA.ensureHerbLibrary();if(!p)throw Error("Не удалось создать компендиум трав.");const old=await p.getDocuments(),ids=new Set(old.map(x=>EA.herbFlag(x)?.ingredientId??EA.herbFlag(x)?.seedId)),missing=EA.herbSeeds().filter(x=>!ids.has(x.ingredientId)).map(EA.herbDocumentData);if(missing.length)await p.documentClass.createDocuments(missing,{pack:p.collection});return p};
-EA.openLibrary=async()=>{if(!game.user.isGM)return ui.notifications.warn("Библиотека трав доступна только мастеру.");const p=await EA.seedLibrary();p.render(true)};
+EA.openLibrary=async()=>{if(!game.user.isGM)return ui.notifications.warn("Библиотека доступна только мастеру.");const p=await EA.seedLibrary();p.render(true)};
 Hooks.once("ready",async()=>{if(game.user.isGM)try{await EA.seedLibrary()}catch(e){console.error(`${EA.id} | Herb library setup failed`,e)}});

@@ -1,7 +1,7 @@
 /* Malcal's ExtraAlchemy core — Foundry VTT 13.351 */
 const EA=globalThis.EA={id:"malcals-extraalchemy",version:"0.7.7"};
 EA.aspects={Vita:"Жизнь",Herba:"Растение",Aqua:"Вода",Ignis:"Огонь",Mortuus:"Смерть",Venenum:"Яд",Motus:"Движение",Sensus:"Чувства",Corpus:"Тело",Praecantatio:"Магия",Terra:"Земля"};
-EA.goals=[["healing","Лечебные травы"],["poison","Ядовитые растения"],["fungi","Грибы и споры"],["roots","Корни и укрепляющие компоненты"],["senses","Компоненты для чувств"],["resistance","Защитные компоненты"],["magic","Редкие и магические растения"]];
+EA.goals=[["healing","Лечебные"],["poisonous","Ядовитые"],["elemental","Стихийные"],["rare_magic","Редкие и магические"]];
 EA.esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 EA.clone=v=>foundry.utils.deepClone(v);
 EA.defaultRecipes=()=>[
@@ -15,7 +15,7 @@ EA.getState=()=>EA.normalizeState(game.settings.get(EA.id,"state"));
 EA.saveState=s=>{if(!game.user.isGM)throw Error("Только ГМ может изменять данные алхимии.");return game.settings.set(EA.id,"state",EA.normalizeState(s))};
 EA.isAuthoritativeGM=()=>game.user.isGM&&game.users.activeGM?.id===game.user.id;
 EA.goalText=g=>(Array.isArray(g)?g:[]).map(id=>EA.goals.find(x=>x[0]===id)?.[1]??id).join(", ")||"Алхимическое сырьё";
-EA.goalChecks=s=>`<fieldset class="ea-goals"><legend>Цели сбора</legend>${EA.goals.map(([id,label])=>`<label class="ea-check"><input type="checkbox" name="ea-goal" value="${id}"${s?.includes(id)?" checked":""}>${EA.esc(label)}</label>`).join("")}</fieldset>`;
+EA.goalChecks=s=>`<fieldset class="ea-goals"><legend>Типы трав для сбора</legend>${EA.goals.map(([id,label])=>`<label class="ea-check"><input type="checkbox" name="ea-goal" value="${id}"${s?.includes(id)?" checked":""}>${EA.esc(label)}</label>`).join("")}</fieldset>`;
 EA.selectedGoals=r=>Array.from(r.querySelectorAll("input[name='ea-goal']:checked")).map(x=>x.value);
 EA.aspectText=a=>Object.entries(a??{}).map(([k,v])=>`${EA.aspects[k]??k}: ${v}`).join(", ")||"свойства ещё не изучены";
 EA.aspectOptions=s=>Object.entries(EA.aspects).map(([k,n])=>`<option value="${k}"${k===s?" selected":""}>${EA.esc(n)}</option>`).join("");
