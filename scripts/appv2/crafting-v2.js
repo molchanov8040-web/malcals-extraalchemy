@@ -21,12 +21,12 @@
     const herb = EA.herb?.(item?.ingredientId);
     const source = item?.img || item?.image || herb?.image;
     if (!source) return "icons/svg/item-bag.svg";
-    if (/^(https?:|data:|icons\/|modules\/|worlds\/|systems\/)/i.test(source)) return source;
+    if (/^(https?:|data:|icons\\/|modules\\/|worlds\\/|systems\\/)/i.test(source)) return source;
     return EA.herbImagePath?.(source) || `modules/${EA.id}/assets/images/herbs/${source}`;
   };
   const recipeImage = recipe => {
     const source = recipe?.img || recipe?.image || recipe?.output?.img || recipe?.output?.image;
-    return /^(https?:|data:|icons\/|modules\/|worlds\/|systems\/)/i.test(String(source || ""))
+    return /^(https?:|data:|icons\\/|modules\\/|worlds\\/|systems\\/)/i.test(String(source || ""))
       ? source
       : "icons/svg/item-bag.svg";
   };
@@ -47,7 +47,6 @@
   };
   const actorCanCraft = actor => Boolean(actor && (game.user.isGM || actor.testUserPermission?.(game.user, "OWNER")));
   const stockCard = (item, selected) => {
-    const state = EA.getState();
     const herb = EA.herb?.(item?.ingredientId);
     const id = String(item?.ingredientId || "");
     const max = Math.max(0, Number(item?.quantity) || 0);
@@ -55,8 +54,7 @@
     const name = item?.name || herb?.name || id || "Неизвестное растение";
     return `<label class="ea-v2-craft-card"><div class="ea-v2-craft-card-top"><img src="${esc(herbImage(item))}" alt="" loading="lazy" onerror="this.onerror=null;this.src='icons/svg/item-bag.svg';"><span class="ea-v2-craft-check"><input type="checkbox" name="ea-v2-craft-ingredient" value="${esc(id)}"${selected ? " checked" : ""}> <b>${esc(name)}</b></span></div><small>На складе: ${max}</small><input class="ea-v2-craft-quantity" type="number" min="1" max="${max}" value="${quantity}" data-craft-quantity="${esc(id)}" aria-label="Количество: ${esc(name)}" ${max < 1 ? "disabled" : ""}></label>`;
   };
-  const recipeCard = (recipe, app) => `<article class="ea-v2-craft-recipe-card"><img src="${esc(recipeImage(recipe))}" alt="" loading="lazy" onerror="this.onerror=null;this.src='icons/svg/item-bag.svg';"><div class="ea-v2-craft-recipe-body"><h3>${esc(recipe?.name || "Безымянный рецепт")}</h3><p>${esc(EA.aspectText?.(recipe?.requirements || {}) || "Требования не указаны")}</p>${game.user.isGM ? `<small>СЛ ${Number(recipe?.brewDC) || 10}</small>` : ""}<button type="button" class="ea-v2-inline-action" data-action="craft-brew" data-recipe-id="${esc(recipe?.id || "")}">Изготовить</button></div></article>`;
-  };
+  const recipeCard = recipe => `<article class="ea-v2-craft-recipe-card"><img src="${esc(recipeImage(recipe))}" alt="" loading="lazy" onerror="this.onerror=null;this.src='icons/svg/item-bag.svg';"><div class="ea-v2-craft-recipe-body"><h3>${esc(recipe?.name || "Безымянный рецепт")}</h3><p>${esc(EA.aspectText?.(recipe?.requirements || {}) || "Требования не указаны")}</p>${game.user.isGM ? `<small>СЛ ${Number(recipe?.brewDC) || 10}</small>` : ""}<button type="button" class="ea-v2-inline-action" data-action="craft-brew" data-recipe-id="${esc(recipe?.id || "")}">Изготовить</button></div></article>`;
   const renderCrafting = (app, state) => {
     const actor = selectedActor();
     if (app.craftingStage === "results") {
@@ -67,7 +65,7 @@
       app.craftingPage = page;
       const pageRecipes = recipes.slice(page * 4, page * 4 + 4);
       const summary = ingredients.map(entry => `${EA.herb?.(entry.ingredientId)?.name || entry.ingredientId} ×${entry.quantity}`).join(" · ");
-      const cards = pageRecipes.map(recipe => recipeCard(recipe, app)).join("");
+      const cards = pageRecipes.map(recipe => recipeCard(recipe)).join("");
       return `<section class="ea-v2-panel ea-v2-crafting-panel"><div class="ea-v2-panel-heading"><div><h2>Подходящие рецепты</h2><p class="ea-v2-muted">Ингредиенты: <b>${esc(summary || "не выбраны")}</b></p></div><span class="ea-v2-panel-count">${recipes.length} найдено</span></div><div class="ea-v2-craft-results">${cards || `<p class="ea-v2-empty">Подходящих рецептов нет.</p>`}</div><footer class="ea-v2-crafting-footer"><button type="button" class="ea-v2-inline-action" data-action="craft-back">← Изменить ингредиенты</button><span class="ea-v2-crafting-page">${recipes.length ? `${page * 4 + 1}–${Math.min(page * 4 + 4, recipes.length)} из ${recipes.length} · ` : ""}${page + 1} / ${pages}</span><button type="button" class="ea-v2-inline-action" data-action="craft-next" ${page >= pages - 1 ? "disabled" : ""}>Вперёд ▶</button></footer></section>`;
     }
     const stock = state?.group?.stock || [];
