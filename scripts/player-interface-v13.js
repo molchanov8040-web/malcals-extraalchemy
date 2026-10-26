@@ -13,6 +13,14 @@ const actorImage=a=>a?.prototypeToken?.texture?.src||a?.img||"icons/svg/mystery-
 const signed=n=>`${n>=0?"+":""}${n}`;
 const card=a=>{const herb=EA.herbalismBonus?.(a)||0,alchemy=EA.alchemyBonus?.(a)||0,selected=a.id===selectedId();return `<button type="button" class="ea-player-card${selected?" is-selected":""}" data-actor="${esc(a.id)}" aria-pressed="${selected}" title="Выбрать ${esc(a.name)}"><img src="${esc(actorImage(a))}" alt=""><span class="ea-player-info"><b>${esc(a.name)}</b><span>Выживание ${signed(skillMod(a))}</span><span>Травник ${signed(herb)}</span><span>Алхимия/отравитель ${signed(alchemy)}</span></span></button>`};
 const sections=[{id:"recipes",label:"Рецепты",icon:"✦"},{id:"gather",label:"Сбор",icon:"❖"},{id:"stock",label:"Склад",icon:"▤"},{id:"crafting",label:"Изготовление",icon:"⚗"}];
+
+EA.knownRecipes=()=>{
+ const state=EA.getState();
+ const recipes=state.recipes.filter(recipe=>game.user.isGM||recipe.playersKnow!==false);
+ const rows=recipes.map(recipe=>`<article class="ea-known-recipe"><h3>${esc(recipe.name)}</h3><p>${esc(recipe.description||"Рецепт без описания.")}</p><p class="notes">Требования: ${esc(EA.aspectText(recipe.requirements))}; СЛ изготовления: ${recipe.brewDC}</p>${game.user.isGM?`<small class="notes">${recipe.playersKnow!==false?"Доступен игрокам":"Скрыт от игроков"}</small>`:""}</article>`).join("");
+ EA.popup("Алхимия — известные рецепты",`<section class="ea-panel ea-known-recipes">${rows||"<p>Известных рецептов пока нет.</p>"}</section>`,{close:{label:"Закрыть"}});
+};
+
 EA.hub=()=>{
  const state=EA.getState();
  const actors=(state.configuration.actorIds||[]).map(id=>game.actors.get(id)).filter(a=>a&&(game.user.isGM||a.testUserPermission(game.user,"OWNER"))).slice(0,6);
