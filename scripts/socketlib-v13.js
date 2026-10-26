@@ -26,7 +26,7 @@
     }
   };
 
-  // Socketlib 1.1.x supplies the invoking user's id as the handler `this.userId`.
+  // Socketlib 1.1.4 puts the invoking user id in this.socketdata.userId.
   // Never authorize a request using a userId supplied by the calling client.
   const runAsGM = async (type, request, callerId) => {
     const user = callerId && game.users.get(callerId);
@@ -45,7 +45,7 @@
   };
 
   const registerHandler = (name, type) => socket.register(name, function (request) {
-    return runAsGM(type, request, this?.userId);
+    return runAsGM(type, request, this?.socketdata?.userId);
   });
 
   Hooks.once("socketlib.ready", () => {
