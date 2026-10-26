@@ -1,5 +1,5 @@
 /* Malcal's ExtraAlchemy core — Foundry VTT 13.351 */
-const EA=globalThis.EA={id:"malcals-extraalchemy",version:"0.7.7"};
+const EA=globalThis.EA={id:"malcals-extraalchemy",version:"0.7.9"};
 EA.aspects={Vita:"Жизнь",Herba:"Растение",Aqua:"Вода",Ignis:"Огонь",Mortuus:"Смерть",Venenum:"Яд",Motus:"Движение",Sensus:"Чувства",Corpus:"Тело",Praecantatio:"Магия",Terra:"Земля"};
 EA.goals=[["healing","Лечебные"],["poisonous","Ядовитые"],["elemental","Стихийные"],["rare_magic","Редкие и магические"]];
 EA.esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
@@ -19,8 +19,6 @@ EA.goalChecks=s=>`<fieldset class="ea-goals"><legend>Типы трав для с
 EA.selectedGoals=r=>Array.from(r.querySelectorAll("input[name='ea-goal']:checked")).map(x=>x.value);
 EA.aspectText=a=>Object.entries(a??{}).map(([k,v])=>`${EA.aspects[k]??k}: ${v}`).join(", ")||"свойства ещё не изучены";
 EA.aspectOptions=s=>Object.entries(EA.aspects).map(([k,n])=>`<option value="${k}"${k===s?" selected":""}>${EA.esc(n)}</option>`).join("");
-/* D&D 5e 5.x stores tools in system.tools. The exact keys vary by system locale
- * and custom tools, so matching accepts standard identifiers and Russian/English names. */
 EA.toolProficiency=(actor,aliases=[])=>{const tools=actor?.system?.tools;if(!tools||typeof tools!=="object")return 0;const wanted=aliases.map(x=>String(x).toLocaleLowerCase());for(const [key,tool] of Object.entries(tools)){const label=[key,tool?.label,tool?.name,tool?.custom,tool?.identifier].filter(Boolean).join(" ").toLocaleLowerCase();if(!wanted.some(alias=>label.includes(alias)))continue;const prof=tool?.prof??tool?.proficient??tool?.value;if(prof===true||Number(prof)>0)return Math.max(0,Number(actor.system?.attributes?.prof)||0)}return 0};
 EA.herbalismBonus=actor=>EA.toolProficiency(actor,["herbalism","herbalist","herbalis","травник","травнич"]);
 EA.alchemyBonus=actor=>EA.toolProficiency(actor,["alchemist","alchem","алхим"]);
