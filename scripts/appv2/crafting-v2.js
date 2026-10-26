@@ -6,7 +6,6 @@
     console.warn(`${EA?.id || "malcals-extraalchemy"} | Crafting ApplicationV2 patch loaded before player app.`);
     return;
   }
-
   const esc = value => EA.esc(value);
   const signed = value => `${Number(value) >= 0 ? "+" : ""}${Number(value) || 0}`;
   const selectedActor = () => {
@@ -21,23 +20,19 @@
     const herb = EA.herb?.(item?.ingredientId);
     const source = item?.img || item?.image || herb?.image;
     if (!source) return "icons/svg/item-bag.svg";
-    if (/^(https?:|data:|icons\\/|modules\\/|worlds\\/|systems\\/)/i.test(source)) return source;
+    if (/^(https?:|data:|icons\/|modules\/|worlds\/|systems\/)/i.test(source)) return source;
     return EA.herbImagePath?.(source) || `modules/${EA.id}/assets/images/herbs/${source}`;
   };
   const recipeImage = recipe => {
     const source = recipe?.img || recipe?.image || recipe?.output?.img || recipe?.output?.image;
-    return /^(https?:|data:|icons\\/|modules\\/|worlds\\/|systems\\/)/i.test(String(source || ""))
-      ? source
-      : "icons/svg/item-bag.svg";
+    return /^(https?:|data:|icons\/|modules\/|worlds\/|systems\/)/i.test(String(source || "")) ? source : "icons/svg/item-bag.svg";
   };
   const ingredientTotals = (state, ingredients) => {
     const totals = {};
     for (const entry of ingredients || []) {
       const herb = EA.herb?.(entry.ingredientId);
       const quantity = Math.max(0, Number(entry.quantity) || 0);
-      for (const [aspect, value] of Object.entries(herb?.aspects || {})) {
-        totals[aspect] = (totals[aspect] || 0) + Number(value || 0) * quantity;
-      }
+      for (const [aspect, value] of Object.entries(herb?.aspects || {})) totals[aspect] = (totals[aspect] || 0) + Number(value || 0) * quantity;
     }
     return totals;
   };
@@ -63,9 +58,8 @@
       const pages = Math.max(1, Math.ceil(recipes.length / 4));
       const page = Math.min(Math.max(0, Number(app.craftingPage) || 0), pages - 1);
       app.craftingPage = page;
-      const pageRecipes = recipes.slice(page * 4, page * 4 + 4);
       const summary = ingredients.map(entry => `${EA.herb?.(entry.ingredientId)?.name || entry.ingredientId} ×${entry.quantity}`).join(" · ");
-      const cards = pageRecipes.map(recipe => recipeCard(recipe)).join("");
+      const cards = recipes.slice(page * 4, page * 4 + 4).map(recipeCard).join("");
       return `<section class="ea-v2-panel ea-v2-crafting-panel"><div class="ea-v2-panel-heading"><div><h2>Подходящие рецепты</h2><p class="ea-v2-muted">Ингредиенты: <b>${esc(summary || "не выбраны")}</b></p></div><span class="ea-v2-panel-count">${recipes.length} найдено</span></div><div class="ea-v2-craft-results">${cards || `<p class="ea-v2-empty">Подходящих рецептов нет.</p>`}</div><footer class="ea-v2-crafting-footer"><button type="button" class="ea-v2-inline-action" data-action="craft-back">← Изменить ингредиенты</button><span class="ea-v2-crafting-page">${recipes.length ? `${page * 4 + 1}–${Math.min(page * 4 + 4, recipes.length)} из ${recipes.length} · ` : ""}${page + 1} / ${pages}</span><button type="button" class="ea-v2-inline-action" data-action="craft-next" ${page >= pages - 1 ? "disabled" : ""}>Вперёд ▶</button></footer></section>`;
     }
     const stock = state?.group?.stock || [];
@@ -73,20 +67,18 @@
     const cards = stock.map(item => stockCard(item, selected.get(item.ingredientId))).join("");
     return `<section class="ea-v2-panel ea-v2-crafting-panel"><div class="ea-v2-panel-heading"><div><h2>Изготовление</h2><p class="ea-v2-muted">${actor ? `Алхимик: <b>${esc(actor.name)}</b> · Интеллект ${signed(actor.system?.abilities?.int?.mod || 0)} · набор ${signed(EA.alchemyBonus?.(actor) || 0)}` : "Нет доступного персонажа."}</p></div></div><div class="ea-v2-craft-grid">${cards || `<p class="ea-v2-empty">Склад пуст.</p>`}</div><footer class="ea-v2-crafting-footer"><button type="button" class="ea-v2-action" data-action="craft-check" ${actor && stock.length ? "" : "disabled"}>Проверить возможные рецепты</button></footer></section>`;
   };
-
   const basePrepare = Base.prototype._prepareContext;
   Base.prototype._prepareContext = async function() {
     const context = await basePrepare.call(this);
     if (this.mode === "crafting") context.panel = renderCrafting(this, EA.getState());
     return context;
   };
-
   const previousActions = Base.DEFAULT_OPTIONS.actions || {};
   Base.DEFAULT_OPTIONS = {
     ...Base.DEFAULT_OPTIONS,
     actions: {
       ...previousActions,
-      "craft-check": function craftCheck() {
+      "craft-check": function() {
         const root = this.element;
         const ingredients = Array.from(root.querySelectorAll("input[name='ea-v2-craft-ingredient']:checked")).map(input => ({
           ingredientId: input.value,
@@ -98,16 +90,9 @@
         this.craftingPage = 0;
         this.render({ force: true });
       },
-      "craft-back": function craftBack() {
-        this.craftingStage = "ingredients";
-        this.craftingPage = 0;
-        this.render({ force: true });
-      },
-      "craft-next": function craftNext() {
-        this.craftingPage = (this.craftingPage || 0) + 1;
-        this.render({ force: true });
-      },
-      "craft-brew": async function craftBrew(event, target) {
+      "craft-back": function() { this.craftingStage = "ingredients"; this.craftingPage = 0; this.render({ force: true }); },
+      "craft-next": function() { this.craftingPage = (this.craftingPage || 0) + 1; this.render({ force: true }); },
+      "craft-brew": async function(event, target) {
         const actor = selectedActor();
         if (!actorCanCraft(actor)) return ui.notifications.warn("Нет доступного персонажа для изготовления.");
         const recipeId = target.dataset.recipeId;
@@ -126,23 +111,15 @@
         } catch (error) {
           console.error(`${EA.id} | ApplicationV2 crafting failed`, error);
           ui.notifications.error(error?.message || "Не удалось изготовить состав.");
-        } finally {
-          target.disabled = false;
-        }
+        } finally { target.disabled = false; }
       }
     }
   };
-
   const originalOpen = EA.openPlayerAppV2;
   EA.openPlayerAppV2 = (...args) => {
     const app = originalOpen(...args);
-    if (app && app.craftingStage === undefined) {
-      app.craftingStage = "ingredients";
-      app.craftingIngredients = [];
-      app.craftingPage = 0;
-    }
+    if (app && app.craftingStage === undefined) { app.craftingStage = "ingredients"; app.craftingIngredients = []; app.craftingPage = 0; }
     return app;
   };
-
   console.info(`${EA.id} | ApplicationV2 crafting registered.`);
 })();
