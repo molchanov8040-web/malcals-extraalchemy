@@ -25,11 +25,14 @@
 
   const selectedKey = () => `${EA.id}.appv2-selected-actor.${game.user?.id ?? "unknown"}`;
   const selectedId = () => {
-    try {
-      return localStorage.getItem(selectedKey()) || "";
-    } catch {
-      return "";
-    }
+    try { return localStorage.getItem(selectedKey()) || ""; } catch { return ""; }
+  };
+  const gatherGoalsKey = () => `${EA.id}.appv2-gather-goals.${game.user?.id ?? "unknown"}`;
+  const readGatherGoals = () => {
+    try { return JSON.parse(localStorage.getItem(gatherGoalsKey()) || "[]"); } catch { return []; }
+  };
+  const saveGatherGoals = (goals) => {
+    try { localStorage.setItem(gatherGoalsKey(), JSON.stringify(goals)); } catch {}
   };
 
   const toolBonus = (actor, keys, labels) => {
@@ -93,30 +96,18 @@
     const key = recipe?.id || normalizeName(recipe?.name);
     if (recipeImageCache.has(key)) return recipeImageCache.get(key);
     const direct = validImage(recipe?.img || recipe?.image || recipe?.output?.img || recipe?.output?.image);
-    if (direct) {
-      recipeImageCache.set(key, direct);
-      return direct;
-    }
-    const itemName = recipe?.output?.itemName || recipe?.name;
-    const wanted = normalizeName(itemName);
+    if (direct) { recipeImageCache.set(key, direct); return direct; }
+    const wanted = normalizeName(recipe?.output?.itemName || recipe?.name);
     try {
       const worldItem = game.items?.find((item) => normalizeName(item.name) === wanted);
-      if (worldItem?.img) {
-        recipeImageCache.set(key, worldItem.img);
-        return worldItem.img;
-      }
+      if (worldItem?.img) { recipeImageCache.set(key, worldItem.img); return worldItem.img; }
       for (const pack of game.packs ?? []) {
         if (pack.documentName !== "Item") continue;
         const index = await pack.getIndex({ fields: ["name", "img"] });
         const entry = index.find((item) => normalizeName(item.name) === wanted && validImage(item.img));
-        if (entry?.img) {
-          recipeImageCache.set(key, entry.img);
-          return entry.img;
-        }
+        if (entry?.img) { recipeImageCache.set(key, entry.img); return entry.img; }
       }
-    } catch (error) {
-      console.warn(`${EA.id} | Не удалось найти изображение рецепта`, recipe?.name, error);
-    }
+    } catch (error) { console.warn(`${EA.id} | Не удалось найти изображение рецепта`, recipe?.name, error); }
     const fallback = "icons/svg/potion.svg";
     recipeImageCache.set(key, fallback);
     return fallback;
@@ -157,17 +148,30 @@
     return `<section class="ea-v2-panel ea-v2-recipes-panel"><div class="ea-v2-panel-heading"><div><h2>Рецепты</h2><p class="ea-v2-muted">Известно рецептов: <b>${recipes.length}</b></p></div><span class="ea-v2-panel-count">${from}–${to} из ${recipes.length}</span></div><div class="ea-v2-recipe-grid">${cards}</div><footer class="ea-v2-pagination"><button type="button" data-action="recipe-prev" ${app.recipePage <= 0 ? "disabled" : ""}>← Назад</button><span>${app.recipePage + 1} / ${pageCount}</span><button type="button" data-action="recipe-next" ${app.recipePage >= pageCount - 1 ? "disabled" : ""}>Вперёд →</button></footer></section>`;
   };
 
+  const renderGather = (state, app) => {
+    const actorId = selectedId();
+    const actor = getActors().find((candidate) => candidate.id === actorId) || getActors()[0];
+    const goals = Array.isArray(app.gatherGoals) ? app.gatherGoals : readGatherGoals();
+    const actorName = actor ? EA.esc(actor.name) : "Персонаж не назначен";
+    const survival = Number(actor?.system?.skills?.sur?.mod ?? actor?.system?.abilities?.wis?.mod ?? 0);
+    const herbalism = actor ? toolBonus(actor, ["herb", "herbalism", "herbalist"], ["травник", "травнич"]) : 0;
+    const goalChecks = (EA.goals || []).map(([id, label]) => `<label class="ea-v2-gather-check"><input type="checkbox" name="ea-v2-gather-goal" value="${EA.esc(id)}"${goals.includes(id) ? " checked" : ""}><span>${EA.esc(label)}</span></label>`).join("");
+    const result = app.gatherResult ? `<div class="ea-v2-gather-result" role="status">${EA.esc(app.gatherResult)}</div>` : "";
+    const disabled = !actor || !goals.length || app.gathering ? "disabled" : "";
+    return `<section class="ea-v2-panel ea-v2-gather-panel"><div class="ea-v2-panel-heading"><div><h2>Сбор</h2><p class="ea-v2-muted">Территория: <b>${EA.esc(state?.configuration?.activeTerritory || "не выбрана")}</b></p></div></div><div class="ea-v2-gather-meta"><span>Персонаж: <b>${actorName}</b></span><span>Выживание ${signed(survival)}</span><span>Набор травника ${signed(herbalism)}</span></div><fieldset class="ea-v2-gather-goals"><legend>Какие травы искать</legend>${goalChecks || `<p>Типы сбора не настроены.</p>`}</fieldset><div class="ea-v2-gather-footer"><button type="button" class="ea-v2-action" data-action="gather-start" ${disabled}>${app.gathering ? "Выполняется сбор…" : "Начать сбор"}</button><small>Бонус владения набором травника добавляется к проверке, если персонаж владеет им.</small></div>${result}</section>`;
+  };
+
   const renderPanel = async (mode, state, app) => {
     const stock = state?.group?.stock || [];
     if (mode === "recipes") return await renderRecipes(state, app);
-    if (mode === "gather") return `<section class="ea-v2-panel"><h2>Сбор</h2><p>Территория: <b>${EA.esc(state?.configuration?.activeTerritory || "не выбрана")}</b></p><p>Выберите персонажа сверху, затем настройте типы трав и начните сбор.</p><button type="button" class="ea-v2-action" disabled>Начать сбор</button></section>`;
+    if (mode === "gather") return renderGather(state, app);
     if (mode === "stock") {
       const cards = stock.length ? stock.map((item) => stockCard(state, item)).join("") : `<p class="ea-v2-empty">Склад пока пуст.</p>`;
       const total = stock.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
       return `<section class="ea-v2-panel ea-v2-stock-panel"><div class="ea-v2-panel-heading"><div><h2>Склад</h2><p class="ea-v2-muted">Видов растений: <b>${stock.length}</b></p></div><span class="ea-v2-panel-count">${total} ед.</span></div><div class="ea-v2-stock-grid">${cards}</div></section>`;
     }
     const total = stock.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
-    return `<section class="ea-v2-panel"><h2>Изготовление</h2><p class="ea-v2-muted">Ингредиентов на складе: <b>${total}</b></p><p>Выбор ингредиентов и результаты проверки будут перенесены в ApplicationV2 следующим этапом.</p><button type="button" class="ea-v2-action" disabled>Проверить возможные рецепты</button></section>`;
+    return `<section class="ea-v2-panel"><h2>Изготовление</h2><p class="ea-v2-muted">Ингредиентов на складе: <b>${total}</b></p><p>Выбор ингредиентов и результаты проверки будут перенесены в ApplicationV2 следующим этапом.</p><button type="button" class="ea-v2-action" disabled>Поверить возможные рецепты</button></section>`;
   };
 
   class EAPlayerApplicationV2 extends api.HandlebarsApplicationMixin(api.ApplicationV2) {
@@ -183,13 +187,40 @@
         "recipe-prev": function recipePrev() { this.recipePage = Math.max(0, (this.recipePage || 0) - 1); this.render({ force: true }); },
         "recipe-next": function recipeNext() { this.recipePage = (this.recipePage || 0) + 1; this.render({ force: true }); },
         "recipe-details": function recipeDetailsAction(event, target) { this.recipeDetailsId = target.dataset.recipeId || null; this.render({ force: true }); },
-        "recipe-back": function recipeBack() { this.recipeDetailsId = null; this.render({ force: true }); }
+        "recipe-back": function recipeBack() { this.recipeDetailsId = null; this.render({ force: true }); },
+        "gather-start": async function gatherStart(event) {
+          const root = this.element;
+          this.gatherGoals = Array.from(root.querySelectorAll("input[name='ea-v2-gather-goal']:checked")).map((input) => input.value);
+          saveGatherGoals(this.gatherGoals);
+          const actorId = selectedId();
+          const actor = getActors().find((candidate) => candidate.id === actorId) || getActors()[0];
+          if (!actor) { ui.notifications.warn("Назначенный персонаж не найден или недоступен."); return; }
+          if (!this.gatherGoals.length) { ui.notifications.warn("Выберите хотя бы один тип трав."); return; }
+          this.gathering = true;
+          this.gatherResult = "Ожидание результата проверки…";
+          await this.render({ force: true });
+          try {
+            const mod = Number(actor.system?.skills?.sur?.mod ?? actor.system?.abilities?.wis?.mod ?? 0);
+            const tool = toolBonus(actor, ["herb", "herbalism", "herbalist"], ["травник", "травнич"]);
+            const roll = await new Roll("1d20 + @mod + @tool", { mod, tool }).evaluate();
+            await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Сбор трав: Выживание/Мудрость ${signed(mod)}${tool ? `, набор травника ${signed(tool)}` : ""}` });
+            const result = await EA.request({ type: "gather", actorId: actor.id, goals: this.gatherGoals, total: roll.total });
+            this.gatherResult = result?.message || (result ? `Проверка выполнена: ${roll.total}.` : "Запрос не выполнен; подробности доступны в уведомлении.");
+          } catch (error) {
+            console.error(`${EA.id} | ApplicationV2 gather failed`, error);
+            this.gatherResult = error?.message || "Не удалось выполнить сбор.";
+            ui.notifications.error(this.gatherResult);
+          } finally {
+            this.gathering = false;
+            await this.render({ force: true });
+          }
+        }
       }
     };
 
     static PARTS = { main: { template: "modules/malcals-extraalchemy/templates/appv2/player-window.hbs" } };
 
-    constructor(options = {}) { super(options); this.mode = "recipes"; this.recipePage = 0; this.recipeDetailsId = null; }
+    constructor(options = {}) { super(options); this.mode = "recipes"; this.recipePage = 0; this.recipeDetailsId = null; this.gatherGoals = readGatherGoals(); this.gatherResult = ""; this.gathering = false; }
 
     async _prepareContext() {
       const state = EA.getState();
