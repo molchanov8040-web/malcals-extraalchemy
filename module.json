@@ -12,13 +12,13 @@
   "esmodules": [
     "scripts/extraalchemy.js",
     "scripts/library-v13.js",
-    "scripts/final-fix-v13.js",
+    "scripts/final-fix-v13.js',
     "scripts/socketlib-v13.js",
     "scripts/potions-library-v13.js",
     "scripts/player-interface-v13.js",
     "scripts/player-workspace-v13.js"
   ],
-  "styles": ["styles/extraalchemy.css"],
+  "styles": ["styles/extraalchemy.css", "styles/player-workspace-v13.css"],
   "languages": [
     { "lang": "ru", "name": "Русский", "path": "lang/ru.json" },
     { "lang": "en", "name": "English", "path": "lang/en.json" }
