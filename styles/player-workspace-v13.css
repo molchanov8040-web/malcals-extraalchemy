@@ -1,19 +1,7 @@
-
-/* 0.8.2.4 crafting panel density and GM navigation */
-.ea-workspace{grid-template-rows:repeat(3,minmax(0,1fr))}
-.ea-center-mark,.ea-center-mark.ea-center-active{grid-row:1/4}
-.ea-nav-recipes{grid-column:1;grid-row:1}
-.ea-nav-stock{grid-column:1;grid-row:2}
-.ea-nav-admin{grid-column:1;grid-row:3}
-.ea-nav-gather{grid-column:3;grid-row:1}
-.ea-nav-crafting{grid-column:3;grid-row:2/4}
-.ea-center-active .ea-inline-ingredients{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none;height:auto;flex:1 1 auto;min-height:0;overflow:auto;align-content:start}
-.ea-center-active .ea-craft-card{font-size:clamp(4px,.34vw,5px);line-height:1.15;grid-template-columns:32px minmax(0,1fr) 42px;gap:3px;padding:3px;min-height:45px}
-.ea-center-active .ea-craft-card>span{font-size:inherit;line-height:inherit;gap:1px}
-.ea-center-active .ea-craft-card>span small{font-size:clamp(4px,.30vw,4.5px);line-height:1.1}
-.ea-center-active .ea-craft-card input[type=checkbox]{transform:scale(.8);margin:0 2px 0 0}
-.ea-center-active .ea-craft-card input[type=number]{width:42px!important;font-size:10px;padding:2px}
-.ea-center-active.ea-admin-active .ea-admin-actions{display:flex;flex-wrap:wrap;gap:8px}
-.ea-center-active .ea-admin-actions button{font-size:13px;padding:7px 12px}
-@media(max-width:900px){.ea-center-active .ea-inline-ingredients{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.ea-center-active .ea-craft-card{grid-template-columns:26px minmax(0,1fr) 36px;font-size:4px}.ea-center-active .ea-craft-card .ea-herb-thumb{width:26px;height:26px}.ea-center-active .ea-craft-card input[type=number]{width:36px!important}.ea-nav-admin{grid-column:1;grid-row:3}.ea-nav-crafting{grid-column:3;grid-row:2/4}}
-@media(max-width:620px){.ea-workspace{grid-template-rows:repeat(3,minmax(0,1fr))}.ea-center-mark.ea-center-active{grid-row:1/4}.ea-center-active .ea-inline-ingredients{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.ea-center-active .ea-craft-card{grid-template-columns:22px minmax(0,1fr) 32px!important;font-size:4px}.ea-center-active .ea-craft-card .ea-herb-thumb{width:22px;height:22px}.ea-center-active .ea-craft-card input[type=number]{width:32px!important}.ea-nav-admin{grid-column:1;grid-row:3}.ea-nav-crafting{grid-column:3;grid-row:2/4}}
+/* 0.8.2.5: restore 16:9 main and section panels */
+.ea-main-ui{width:100%;aspect-ratio:16/9;min-height:0;height:auto;overflow:hidden}
+.ea-workspace{min-height:0;grid-template-columns:150px minmax(0,1fr) 150px;grid-template-rows:repeat(2,minmax(0,1fr))}
+.ea-center-mark,.ea-center-mark.ea-center-active{width:min(100%,720px);aspect-ratio:16/9;min-height:0;max-height:100%;box-sizing:border-box;overflow:auto}
+.window-app:has(.ea-main-ui) .window-content{overflow:hidden}
+@media(max-width:650px){.ea-main-ui{aspect-ratio:16/9;min-height:0}.ea-workspace{min-height:0;grid-template-columns:100px minmax(0,1fr) 100px;grid-template-rows:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.ea-main-ui{aspect-ratio:16/9;min-height:0}.ea-workspace{grid-template-columns:1fr 1fr;grid-template-rows:auto minmax(0,1fr) auto}.ea-center-mark.ea-center-active{grid-row:2;aspect-ratio:16/9}}
