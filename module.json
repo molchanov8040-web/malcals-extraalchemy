@@ -12,7 +12,7 @@
   "esmodules": [
     "scripts/extraalchemy.js",
     "scripts/library-v13.js",
-    "scripts/final-fix-v13.js',
+    "scripts/final-fix-v13.js",
     "scripts/socketlib-v13.js",
     "scripts/potions-library-v13.js",
     "scripts/player-interface-v13.js",
