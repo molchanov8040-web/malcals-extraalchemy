@@ -8,22 +8,39 @@
   const FOLDER_NAME = "Malcal's ExtraAlchemy";
   const FLAG = "library-herb";
   const worldPackId = `world.${PACK_NAME}`;
+  const HERB_ASSETS = new Set([
+    "andraste-grace.webp", "arbor-blessing.webp", "blood-lotus.webp", "crystal-grace.webp",
+    "dawn-lotus.webp", "deathroot.webp", "deep-mushroom.webp", "elfroot.webp",
+    "embrium.webp", "lunatics-deathroot.webp", "lyrium.webp", "prophets-laurel.webp",
+    "rashvine.webp", "royal-elfroot.webp", "spindleweed.webp", "vandal-aria.webp"
+  ]);
 
+  // Базовые записи намеренно соответствуют каждому файлу в assets/images/herbs/.
+  // Игровые значения новых записей можно изменить через GM-редактор библиотеки.
   const seeds = [
     { ingredientId: "elfroot", name: "Эльфийский корень", image: "elfroot.webp", rarity: "common", types: ["healing"], regions: ["Лес", "Равнины", "Поселение"], aspects: { Vita: 2, Herba: 1 }, description: "Распространённый корень, используемый в целебных составах." },
+    { ingredientId: "royal-elfroot", name: "Королевский эльфийский корень", image: "royal-elfroot.webp", rarity: "uncommon", types: ["healing", "rare_magic"], regions: ["Лес", "Равнины"], aspects: { Vita: 3, Herba: 2 }, description: "Редкая разновидность эльфийского корня с усиленными целебными свойствами." },
     { ingredientId: "deep-mushroom", name: "Глубинный гриб", image: "deep-mushroom.webp", rarity: "uncommon", types: ["poisonous", "rare_magic"], regions: ["Подземелье", "Руины"], aspects: { Mortuus: 1, Venenum: 2, Herba: 1 }, description: "Бледный гриб, растущий в сырых подземных местах." },
     { ingredientId: "deathroot", name: "Корень смерти", image: "deathroot.webp", rarity: "rare", types: ["poisonous"], regions: ["Болото", "Руины"], aspects: { Mortuus: 2, Venenum: 3 }, description: "Опасный корень, пригодный для сильных ядов." },
-    { ingredientId: "emberbloom", name: "Углецвет", image: "emberbloom.webp", rarity: "uncommon", types: ["elemental"], regions: ["Горы", "Руины"], aspects: { Ignis: 2, Herba: 1 }, description: "Теплолюбивое растение с яркими лепестками." },
-    { ingredientId: "mist-lily", name: "Туманная лилия", image: "mist-lily.webp", rarity: "uncommon", types: ["healing", "elemental"], regions: ["Болото", "Побережье"], aspects: { Aqua: 2, Vita: 1 }, description: "Влаголюбивая лилия с прохладным соком." },
-    { ingredientId: "storm-thistle", name: "Грозовой чертополох", image: "storm-thistle.webp", rarity: "rare", types: ["elemental", "rare_magic"], regions: ["Горы", "Побережье"], aspects: { Motus: 2, Ignis: 1, Terra: 1 }, description: "Колючее растение, накапливающее энергию гроз." },
+    { ingredientId: "lunatics-deathroot", name: "Лунный корень смерти", image: "lunatics-deathroot.webp", rarity: "rare", types: ["poisonous", "rare_magic"], regions: ["Болото", "Руины", "Подземелье"], aspects: { Mortuus: 3, Venenum: 2, Praecantatio: 1 }, description: "Ночная разновидность корня смерти, насыщенная магической энергией." },
     { ingredientId: "blood-lotus", name: "Кровавый лотос", image: "blood-lotus.webp", rarity: "rare", types: ["healing", "poisonous"], regions: ["Болото", "Руины"], aspects: { Vita: 2, Venenum: 1, Herba: 2 }, description: "Редкий болотный цветок с мощными, но опасными свойствами." },
+    { ingredientId: "dawn-lotus", name: "Рассветный лотос", image: "dawn-lotus.webp", rarity: "uncommon", types: ["healing", "elemental"], regions: ["Болото", "Побережье"], aspects: { Vita: 2, Aqua: 1, Ignis: 1 }, description: "Светолюбивый цветок, раскрывающийся с первыми лучами солнца." },
+    { ingredientId: "andraste-grace", name: "Благословение Андрасте", image: "andraste-grace.webp", rarity: "rare", types: ["healing", "rare_magic"], regions: ["Лес", "Равнины", "Поселение"], aspects: { Vita: 3, Praecantatio: 1 }, description: "Целебная трава, которую находят в тихих благословенных местах." },
+    { ingredientId: "embrium", name: "Эмбриум", image: "embrium.webp", rarity: "uncommon", types: ["healing", "elemental"], regions: ["Лес", "Болото"], aspects: { Vita: 1, Aqua: 2, Herba: 1 }, description: "Мягкий цветок с насыщенным соком, пригодный для настоев." },
+    { ingredientId: "spindleweed", name: "Веретённая трава", image: "spindleweed.webp", rarity: "common", types: ["elemental"], regions: ["Побережье", "Болото"], aspects: { Aqua: 2, Herba: 1 }, description: "Тонкая прибрежная трава, хорошо удерживающая влагу." },
+    { ingredientId: "rashvine", name: "Колючая лоза", image: "rashvine.webp", rarity: "common", types: ["poisonous"], regions: ["Лес", "Руины"], aspects: { Venenum: 2, Herba: 1 }, description: "Колючая лоза с раздражающим и токсичным соком." },
+    { ingredientId: "crystal-grace", name: "Кристальная благодать", image: "crystal-grace.webp", rarity: "rare", types: ["healing", "rare_magic"], regions: ["Горы", "Подземелье"], aspects: { Vita: 2, Terra: 1, Praecantatio: 2 }, description: "Хрупкий цветок, растущий среди кристаллов и насыщенный магией." },
+    { ingredientId: "arbor-blessing", name: "Благословение леса", image: "arbor-blessing.webp", rarity: "rare", types: ["healing", "rare_magic"], regions: ["Лес"], aspects: { Vita: 2, Herba: 3 }, description: "Редкое растение из глубины древнего леса." },
+    { ingredientId: "prophets-laurel", name: "Лавр Пророка", image: "prophets-laurel.webp", rarity: "rare", types: ["rare_magic"], regions: ["Руины", "Поселение"], aspects: { Sensus: 2, Praecantatio: 2 }, description: "Ароматный лавр, который используют в обрядах и пророческих настоях." },
+    { ingredientId: "vandal-aria", name: "Вандальская ария", image: "vandal-aria.webp", rarity: "rare", types: ["elemental", "rare_magic"], regions: ["Горы", "Побережье"], aspects: { Motus: 2, Ignis: 2, Praecantatio: 1 }, description: "Необычное растение, чьи лепестки колышутся даже без ветра." },
     { ingredientId: "lyrium", name: "Лириум", image: "lyrium.webp", rarity: "rare", types: ["rare_magic"], regions: ["Подземелье", "Руины", "Горы"], aspects: { Praecantatio: 3, Terra: 1, Sensus: 1 }, description: "Магически насыщенный минерал, применяемый в сложных составах." }
   ];
 
   const esc = value => E.esc(value);
   const validTypes = () => new Set((E.goals || []).map(([id]) => id));
-  const imagePath = image => image ? `modules/${E.id}/assets/images/herbs/${image}` : "icons/svg/item-bag.svg";
+  const imagePath = image => HERB_ASSETS.has(image) ? `modules/${E.id}/assets/images/herbs/${image}` : "icons/svg/item-bag.svg";
   E.herbImagePath = imagePath;
+  E.herbAssetFiles = () => [...HERB_ASSETS];
   E.libraryPackId = worldPackId;
   E.herbFlag = document => document?.getFlag?.(E.id, FLAG) ?? document?.flags?.[E.id]?.[FLAG] ?? null;
 
@@ -40,7 +57,7 @@
       const types = (Array.isArray(override.types) ? override.types : seed.types).filter(type => allowed.has(type));
       const regions = Array.isArray(override.regions) ? override.regions.filter(Boolean) : [...seed.regions];
       const aspects = { ...seed.aspects, ...(override.aspects || {}) };
-      return { ...seed, ...override, aspects, regions, types, goals: types };
+      return { ...seed, ...override, image: seed.image, aspects, regions, types, goals: types };
     });
   };
   E.herb = key => E.herbSeeds().find(seed => seed.ingredientId === key) || null;

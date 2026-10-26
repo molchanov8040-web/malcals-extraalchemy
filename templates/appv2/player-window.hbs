@@ -1,0 +1,28 @@
+<div class="ea-v2-shell">
+  <header class="ea-v2-title">{{title}}</header>
+  <section class="ea-v2-roster" aria-label="Персонажи игроков">
+    {{#if roster.length}}
+      {{#each roster}}
+        <button type="button" class="ea-v2-actor {{#if selected}}is-selected{{/if}}" data-action="select-actor" data-actor="{{id}}" aria-pressed="{{selected}}">
+          <img src="{{img}}" alt="">
+          <span class="ea-v2-actor-info"><b>{{name}}</b><small>Выживание {{survival}}</small><small>Травник {{herb}}</small><small>Алхимик/отравитель {{alchemy}}</small></span>
+        </button>
+      {{/each}}
+    {{else}}
+      <p class="ea-v2-empty">Нет доступных персонажей.</p>
+    {{/if}}
+  </section>
+  <div class="ea-v2-layout">
+    <nav class="ea-v2-nav ea-v2-nav-left" aria-label="Разделы слева">
+      {{#each leftModes}}
+        <button type="button" data-action="select-mode" data-mode="{{id}}" class="ea-v2-nav-button {{#if active}}is-active{{/if}}"><span>{{icon}}</span>{{label}}</button>
+      {{/each}}
+    </nav>
+    <section class="ea-v2-stage">{{{panel}}}</section>
+    <nav class="ea-v2-nav ea-v2-nav-right" aria-label="Разделы справа">
+      {{#each rightModes}}
+        <button type="button" data-action="select-mode" data-mode="{{id}}" class="ea-v2-nav-button {{#if active}}is-active{{/if}}"><span>{{icon}}</span>{{label}}</button>
+      {{/each}}
+    </nav>
+  </div>
+</div>
