@@ -16,7 +16,8 @@ EA.toolProficiency=(actor,aliases=[])=>{
 };
 EA.herbalismBonus=actor=>EA.toolProficiency(actor,["herb","Herbalism Kit","herbalism","herbalist","травник","травнич"]);
 EA.alchemyBonus=actor=>Math.max(EA.toolProficiency(actor,["alchemist","Alchemist's Supplies","алхим"]),EA.toolProficiency(actor,["poison","poisoner","Poisoner's Kit","отравитель","отравителей"]));
-const selectedKey=`${EA.id}.selected-actor.${game.user.id}`,selectedId=()=>{try{return localStorage.getItem(selectedKey)||""}catch{return ""}},setSelected=id=>{try{localStorage.setItem(selectedKey,id)}catch{}};
+const selectedKey=()=>`${EA.id}.selected-actor.${game.user?.id??"unknown"}`;
+const selectedId=()=>{try{return localStorage.getItem(selectedKey())||""}catch{return ""}},setSelected=id=>{try{localStorage.setItem(selectedKey(),id)}catch{}};
 const baseActors=EA.actors;EA.actors=state=>{const list=baseActors(state),id=selectedId();return id?[...list.filter(a=>a.id===id),...list.filter(a=>a.id!==id)]:list};
 const skillMod=a=>Number(a?.system?.skills?.sur?.mod??a?.system?.abilities?.wis?.mod??0),actorImage=a=>a?.prototypeToken?.texture?.src||a?.img||"icons/svg/mystery-man.svg",signed=n=>`${n>=0?"+":""}${n}`;
 const card=a=>{const herb=EA.herbalismBonus?.(a)||0,alchemy=EA.alchemyBonus?.(a)||0,selected=a.id===selectedId();return `<button type="button" class="ea-player-card${selected?" is-selected":""}" data-actor="${esc(a.id)}" aria-pressed="${selected}" title="Выбрать ${esc(a.name)}"><img src="${esc(actorImage(a))}" alt=""><span class="ea-player-info"><b>${esc(a.name)}</b><span>Выживание ${signed(skillMod(a))}</span><span>Набор травника ${signed(herb)}</span><span>Алхимик / отравитель ${signed(alchemy)}</span></span></button>`};
