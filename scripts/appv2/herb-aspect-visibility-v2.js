@@ -8,7 +8,8 @@
     if (game.user?.isGM) return allKeys();
     let config = {};
     try { config = game.settings.get(EA.id, setting) || {}; } catch { /* not initialized */ }
-    return Array.isArray(config[herbId]) ? config[herbId] : allKeys();
+    // Unconfigured herbs expose no aspects to players by default.
+    return Array.isArray(config[herbId]) ? config[herbId] : [];
   };
   EA.playerVisibleHerbAspects = (herbId, aspects) => {
     const allowed = new Set(visibleKeys(herbId));
@@ -23,11 +24,11 @@
       let config = {};
       try { config = game.settings.get(EA.id, setting) || {}; } catch {}
       const rows = herbs.map(herb => {
-        const enabled = new Set(Array.isArray(config[herb.ingredientId]) ? config[herb.ingredientId] : Object.keys(herb.aspects || {}));
+        const enabled = new Set(Array.isArray(config[herb.ingredientId]) ? config[herb.ingredientId] : []);
         const checks = Object.keys(herb.aspects || {}).map(key => `<label class="ea-check"><input type="checkbox" data-herb-aspect="${EA.esc(herb.ingredientId)}" value="${EA.esc(key)}"${enabled.has(key) ? " checked" : ""}> ${EA.esc(EA.aspects[key] || key)} (${Number(herb.aspects[key])})</label>`).join("");
         return `<details class="ea-herb-edit"><summary>${EA.esc(herb.name)}</summary><fieldset><legend>Аспекты, видимые игрокам</legend>${checks || "<p>У растения нет аспектов.</p>"}</fieldset></details>`;
       }).join("");
-      new Dialog({ title: "Аспекты растений, доступные игрокам", content: `<section class="ea-panel"><p>Настройка применяется отдельно к каждому растению. Снятые аспекты остаются в данных мира, но не отображаются игрокам на карточке растения.</p>${rows}</section>`, buttons: { save: { label: "Сохранить", callback: async html => {
+      new Dialog({ title: "Аспекты растений, доступные игрокам", content: `<section class="ea-panel"><p>Настройка применяется отдельно к каждому растению. По умолчанию аспекты скрыты. Отметьте те, которые игрокам разрешено видеть.</p>${rows}</section>`, buttons: { save: { label: "Сохранить", callback: async html => {
         const root = html?.[0] || html;
         const next = {};
         for (const herb of herbs) next[herb.ingredientId] = Array.from(root.querySelectorAll(`[data-herb-aspect="${CSS.escape(herb.ingredientId)}"]:checked`)).map(input => input.value);
