@@ -3,7 +3,7 @@
 const EA=globalThis.EA;if(!EA)return;
 const openAdmin=()=>{
  if(!game.user?.isGM)return;
- EA.popup("Алхимия — панель ведущего",`<section class="ea-panel ea-admin-actions"><button type="button" data-admin="config">Настройка алхимии</button><button type="button" data-admin="aspects">Аспекты, доступные игрокам</button><button type="button" data-admin="recipes">Редактор рецептов</button><button type="button" data-admin="library">Библиотека трав</button></section>`,{close:{label:"Закрыть"}},root=>root.querySelectorAll("[data-admin]").forEach(button=>button.onclick=()=>{const action=button.dataset.admin;if(action==="config")EA.config?.();else if(action==="aspects")EA.openAspectSettings?.();else if(action==="recipes")EA.recipes?.();else if(action==="library")EA.openLibrary?.()}));
+ EA.popup("Алхимия — панель ведущего",`<section class="ea-panel ea-admin-actions"><button type="button" data-admin="config">Настройка алхимии</button><button type="button" data-admin="herb-aspects">Аспекты игроков по растениям</button><button type="button" data-admin="recipes">Редактор рецептов</button><button type="button" data-admin="library">Библиотека трав</button></section>`,{close:{label:"Закрыть"}},root=>root.querySelectorAll("[data-admin]").forEach(button=>button.onclick=()=>{const action=button.dataset.admin;if(action==="config")EA.config?.();else if(action==="herb-aspects")EA.openHerbAspectVisibility?.();else if(action==="recipes")EA.recipes?.();else if(action==="library")EA.openLibrary?.()}));
 };
 Hooks.on("getSceneControlButtons",controls=>{
  if(!game.user?.isGM)return;
