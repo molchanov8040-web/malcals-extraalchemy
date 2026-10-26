@@ -6,6 +6,7 @@
   const PACKS = { potions: "malcals-extraalchemy-potions", scripts: "malcals-extraalchemy-potion-scripts" };
   const POTION_FLAG = "ready-potion";
   const MACRO_FLAG = "ready-potion-script";
+  const FOLDER_NAME = "Malcal's ExtraAlchemy";
   const worldPackId = name => `world.${name}`;
   const normalizeName = name => String(name ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase();
   const esc = value => E.esc ? E.esc(value) : String(value ?? "").replace(/[&<>\"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char]));
@@ -14,7 +15,7 @@
     { id: "small-healing-poultice", name: "Малая целебная припарка", img: "modules/malcals-extraalchemy/assets/images/potions/small-healing-poultice.webp", description: "<blockquote><p>Припарка для лечения незначительных порезов и ушибов.</p></blockquote><p>Восстанавливает <b>2d4 + 2 ПЗ</b>.</p><p>Использование: бонусное действие. Предмет расходуется после применения.</p>", kind: "healing", healing: { number: 2, denomination: 4, bonus: "2" } },
     { id: "healing-poultice", name: "Целебная припарка", img: "modules/malcals-extraalchemy/assets/images/potions/healing-poultice.webp", description: "<blockquote><p>Целебная припарка для серьёзных ран.</p></blockquote><p>Восстанавливает <b>4d4 + 4 ПЗ</b>.</p><p>Использование: бонусное действие. Предмет расходуется после применения.</p>", kind: "healing", healing: { number: 4, denomination: 4, bonus: "4" } },
     { id: "large-healing-poultice", name: "Большая целебная припарка", img: "modules/malcals-extraalchemy/assets/images/potions/large-healing-poultice.webp", description: "<blockquote><p>Большая припарка, пропитанная концентрированным лечебным составом.</p></blockquote><p>Восстанавливает <b>8d4 + 8 ПЗ</b>.</p><p>Использование: бонусное действие. Предмет расходуется после применения.</p>", kind: "healing", healing: { number: 8, denomination: 4, bonus: "8" } },
-    { id: "strong-healing-poultice", name: "Сильная целебная припарка", img: "modules/malcals-extraalchemy/assets/images/potions/strong-healing-poultice.webp", description: "<blockquote><p>Сильная целебная припарка для тяжёлых ранений.</p></blockquote><p>Восстанавливает <b>10d4 + 20 ПЗ</b>.</p><p>Использование: бонусное действие. Предмет расходутся после применения.</p>", kind: "healing", healing: { number: 10, denomination: 4, bonus: "20" } },
+    { id: "strong-healing-poultice", name: "Сильная целебная припарка", img: "modules/malcals-extraalchemy/assets/images/potions/strong-healing-poultice.webp", description: "<blockquote><p>Сильная целебная припарка для тяжёлых ранений.</p></blockquote><p>Восстанавливает <b>10d4 + 20 ПЗ</b>.</p><p>Использование: бонусное действие. Предмет расходуется после применения.</p>", kind: "healing", healing: { number: 10, denomination: 4, bonus: "20" } },
     { id: "minor-lyrium-potion", name: "Малое Зелье лириума", img: "modules/malcals-extraalchemy/assets/images/potions/minor-lyrium-potion.webp", description: "<blockquote><p>Малое зелье лириума.</p></blockquote><p>Восстанавливает запас в <b>1 круг</b> для восстановления ячеек заклинаний.</p>", kind: "lyrium", restoredSlots: 1 },
     { id: "ordinary-lyrium-potion", name: "Обычное Зелье лириума", img: "modules/malcals-extraalchemy/assets/images/potions/ordinary-lyrium-potion.webp", description: "<blockquote><p>Обычное зелье лириума.</p></blockquote><p>Восстанавливает запас в <b>2 круга</b> для восстановления ячеек заклинаний.</p>", kind: "lyrium", restoredSlots: 2 },
     { id: "large-lyrium-potion", name: "Большое Зелье лириума", img: "modules/malcals-extraalchemy/assets/images/potions/large-lyrium-potion.webp", description: "<blockquote><p>Большое зелье лириума.</p></blockquote><p>Восстанавливает запас в <b>3 круга</b> для восстановления ячеек заклинаний.</p>", kind: "lyrium", restoredSlots: 3 },
@@ -36,8 +37,7 @@ for (const level of [1, 2, 3, 4, 5, 6, 7, 8, 9]) {
   if (!slot) continue;
   const current = Number(slot.value ?? 0), maximum = Number(slot.max ?? 0);
   if (current >= maximum) continue;
-  const missing = maximum - current;
-  const canRestore = Math.min(missing, Math.floor(pointsLeft / level));
+  const canRestore = Math.min(maximum - current, Math.floor(pointsLeft / level));
   if (canRestore < 1) continue;
   updates["system.spells." + key + ".value"] = current + canRestore;
   restored.push(canRestore + " ячеек " + level + " круга");
@@ -47,12 +47,18 @@ if (!restored.length) return ui.notifications.info("Нет потраченны�
 await actor.update(updates);
 ui.notifications.info(actor.name + ": восстановлено " + restored.join(", ") + ". Осталось кругов: " + pointsLeft);`;
 
-  const makePack = async (name, label, type) => {
+  const ensureFolder = async () => {
+    let folder = game.folders?.find(f => f.type === "Compendium" && f.name === FOLDER_NAME);
+    if (!folder) [folder] = await Folder.createDocuments([{ name: FOLDER_NAME, type: "Compendium", sorting: "a" }]);
+    return folder;
+  };
+  const makePack = async (name, label, type, folder) => {
     let pack = game.packs.get(worldPackId(name));
     if (!pack && game.user.isGM) {
       const Collection = globalThis.CompendiumCollection ?? foundry.documents.collections.CompendiumCollection;
       pack = await Collection.createCompendium({ type, name, label, package: "world" });
     }
+    if (pack && folder && pack.folder?.id !== folder.id) await pack.setFolder(folder.id);
     return pack ?? null;
   };
 
@@ -87,8 +93,8 @@ ui.notifications.info(actor.name + ": восстановлено " + restored.jo
     };
   };
 
-  const seedMacroPack = async () => {
-    const pack = await makePack(PACKS.scripts, "Скрипты зелий", "Macro");
+  const seedMacroPack = async folder => {
+    const pack = await makePack(PACKS.scripts, "Скрипты зелий", "Macro", folder);
     if (!pack) return new Map();
     const docs = await pack.getDocuments(), result = new Map();
     for (const seed of potionSeeds().filter(x => x.kind === "lyrium")) {
@@ -103,8 +109,8 @@ ui.notifications.info(actor.name + ": восстановлено " + restored.jo
     return result;
   };
 
-  const seedPotionPack = async macros => {
-    const pack = await makePack(PACKS.potions, "Готовые зелья", "Item");
+  const seedPotionPack = async (macros, folder) => {
+    const pack = await makePack(PACKS.potions, "Готовые зелья", "Item", folder);
     if (!pack) return;
     const docs = await pack.getDocuments();
     for (const seed of potionSeeds()) {
@@ -117,8 +123,9 @@ ui.notifications.info(actor.name + ": восстановлено " + restored.jo
 
   E.ensurePotionLibraries = async () => {
     if (!game.user.isGM) return;
-    const macros = await seedMacroPack();
-    await seedPotionPack(macros);
+    const folder = await ensureFolder();
+    const macros = await seedMacroPack(folder);
+    await seedPotionPack(macros, folder);
   };
 
   const findNamedItems = async name => {
