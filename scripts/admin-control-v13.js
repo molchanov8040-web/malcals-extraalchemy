@@ -2,7 +2,6 @@
 (() => {
   const EA = globalThis.EA;
   if (!EA) return;
-  const setting = "herbPlayerVisibleAspects";
   const isGM = () => !!game.user?.isGM;
   const esc = value => EA.esc(value);
 
@@ -11,18 +10,16 @@
     const state = EA.getState();
     const herbs = EA.herbSeeds?.() || [];
     const ids = new Set(herbs.map(herb => herb.ingredientId));
-    const visibility = game.settings.get(EA.id, setting) || {};
     const renderRow = (id, name, aspects, orphan = false) => {
       const known = state.group.knownAspects[id] || {};
-      const visible = Array.isArray(visibility[id]) ? visibility[id] : [];
       const count = Number(state.group.stock.find(item => item.ingredientId === id)?.quantity || 0);
-      const checks = Object.entries(aspects).map(([key, value]) => `<tr><td>${esc(EA.aspects[key] || key)}: ${esc(value)}</td><td><input type="checkbox" class="ea-stock-known" value="${esc(key)}"${Object.hasOwn(known, key) ? " checked" : ""} aria-label="Известен группе: ${esc(EA.aspects[key] || key)}"></td><td><input type="checkbox" class="ea-stock-visible" value="${esc(key)}"${visible.includes(key) ? " checked" : ""} aria-label="Виден игрокам: ${esc(EA.aspects[key] || key)}"></td></tr>`).join("");
-      const editor = orphan ? `<p>Растение отсутствует в библиотеке; его можно убрать со склада.</p>` : `<table><thead><tr><th>Аспект</th><th>Известен группе</th><th>Виден игрокам</th></tr></thead><tbody>${checks || '<tr><td colspan="3">Аспектов нет.</td></tr>'}</tbody></table><p>Известные группе аспекты используются при изготовлении. Видимость управляет только показом: игрок видит лишь известные и разрешённые аспекты.</p><button type="button" data-stock-action="known">Сохранить известные аспекты</button><button type="button" data-stock-action="visible">Сохранить видимость</button>`;
+      const checks = Object.entries(aspects).map(([key, value]) => `<tr><td>${esc(EA.aspects[key] || key)}: ${esc(value)}</td><td><input type="checkbox" class="ea-stock-aspect" value="${esc(key)}"${Object.hasOwn(known, key) ? " checked" : ""} aria-label="Доступен игрокам и при изготовлении: ${esc(EA.aspects[key] || key)}"></td></tr>`).join("");
+      const editor = orphan ? `<p>Растение отсутствует в библиотеке; его можно убрать со склада.</p>` : `<table><thead><tr><th>Аспект</th><th>Показывать игрокам и разрешить при изготовлении</th></tr></thead><tbody>${checks || '<tr><td colspan="2">Аспектов нет.</td></tr>'}</tbody></table><p>Одна настройка управляет и отображением аспекта игрокам, и его использованием при проверке рецептов и изготовлении. Неотмеченные аспекты недоступны игрокам и не учитываются при изготовлении.</p><button type="button" data-stock-action="aspects">Сохранить доступность аспектов</button>`;
       return `<details class="ea-herb-edit" data-stock-herb="${esc(id)}"><summary>${esc(name)} — на складе: <span class="ea-stock-count">${count}</span></summary><label>Количество <input class="ea-stock-quantity" type="number" min="1" step="1" value="1"></label>${orphan ? "" : '<button type="button" data-stock-action="add">Добавить на склад</button>'}<button type="button" data-stock-action="remove">Убрать количество</button><button type="button" data-stock-action="remove-all">Убрать всё</button>${editor}</details>`;
     };
     const rows = herbs.map(herb => renderRow(herb.ingredientId, herb.name, herb.aspects || {})).join("");
     const orphans = state.group.stock.filter(item => !ids.has(item.ingredientId)).map(item => renderRow(item.ingredientId, item.name || item.ingredientId, {}, true)).join("");
-    const content = `<section class="ea-panel ea-admin-stock"><p>Выберите растение. Если видимость не настроена, его аспекты скрыты от игроков. Склад, знания и видимость сохраняются отдельно.</p>${rows}${orphans}</section>`;
+    const content = `<section class="ea-panel ea-admin-stock"><p>Выберите растение. Отмеченные аспекты доступны игрокам и учитываются при изготовлении. Неотмеченные аспекты скрыты от игроков и не используются в расчёте подходящих рецептов. Склад и аспекты сохраняются в игровых данных.</p>${rows}${orphans}</section>`;
     let busy = false;
     EA.popup("Алхимия — склад и растения", content, { close: { label: "Закрыть" } }, root => {
       root.querySelectorAll("[data-stock-action]").forEach(button => {
@@ -52,22 +49,15 @@
               await EA.commit(fresh);
               row.querySelector(".ea-stock-count").textContent = String(EA.entry(EA.getState(), id)?.quantity || 0);
               ui.notifications.info("Склад обновлён.");
-            } else if (action === "known") {
+            } else if (action === "aspects") {
               if (!herb) throw new Error("Растение отсутствует в библиотеке.");
               const next = {};
-              row.querySelectorAll(".ea-stock-known:checked").forEach(input => {
+              row.querySelectorAll(".ea-stock-aspect:checked").forEach(input => {
                 if (Object.hasOwn(herb.aspects || {}, input.value)) next[input.value] = herb.aspects[input.value];
               });
               fresh.group.knownAspects[id] = next;
               await EA.commit(fresh);
-              ui.notifications.info("Известные группе аспекты сохранены.");
-            } else if (action === "visible") {
-              if (!herb) throw new Error("Растение отсутствует в библиотеке.");
-              const next = foundry.utils.deepClone(game.settings.get(EA.id, setting) || {});
-              next[id] = Array.from(row.querySelectorAll(".ea-stock-visible:checked"), input => input.value).filter(key => Object.hasOwn(herb.aspects || {}, key));
-              await game.settings.set(EA.id, setting, next);
-              EA.changed?.();
-              ui.notifications.info("Видимость аспектов для игроков сохранена.");
+              ui.notifications.info("Доступность аспектов для игроков и изготовления сохранена.");
             }
           } catch (error) {
             console.error(`${EA.id} | Управление складом:`, error);
