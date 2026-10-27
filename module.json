@@ -12,6 +12,7 @@
   "esmodules": [
     "scripts/extraalchemy.js",
     "scripts/compat/foundry-compat.js",
+    "scripts/compat/dnd5e-compat.js",
     "scripts/library-v13.js",
     "scripts/final-fix-v13.js",
     "scripts/socketlib-v13.js",
