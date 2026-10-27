@@ -2,7 +2,7 @@
   "id": "malcals-extraalchemy",
   "title": "Malcal's ExtraAlchemy",
   "description": "Shared herb gathering, research and crafting tools for Foundry VTT 13 and 14.",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "compatibility": { "minimum": "13", "verified": "13.351", "maximum": "14" },
   "authors": [{ "name": "Malcal" }],
   "url": "https://github.com/molchanov8040-web/malcals-extraalchemy",
