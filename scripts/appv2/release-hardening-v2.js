@@ -17,6 +17,7 @@
     return actors.find(actor => actor.id === selected) || actors[0] || null;
   };
   const selectedGoals = root => Array.from(root?.querySelectorAll?.("input[name='ea-v2-gather-goal']:checked") || []).map(input => input.value);
+  const requestId = () => globalThis.foundry?.utils?.randomID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   const Base = E.PlayerApplicationV2;
   if (Base?.DEFAULT_OPTIONS?.actions) {
@@ -32,7 +33,7 @@
       this.gatherResult = "Ожидание проверки ведущего…";
       try {
         await this.render({ force: true });
-        const result = await E.request({ type: "gather", actorId: actor.id, goals });
+        const result = await E.request({ type: "gather", actorId: actor.id, goals, requestId: requestId() });
         this.gatherResult = result?.message || "Запрос обработан ведущим.";
       } catch (error) {
         console.error(`${E.id} | Hardened gather failed`, error);
@@ -57,9 +58,9 @@
           type: "brew",
           actorId: actor.id,
           recipeId,
-          ingredients: Array.isArray(this.craftingIngredients) ? this.craftingIngredients : []
+          ingredients: Array.isArray(this.craftingIngredients) ? this.craftingIngredients : [],
+          requestId: requestId()
         });
-        Hooks.callAll("eaStockChanged");
         await this.render({ force: true });
       } catch (error) {
         console.error(`${E.id} | Hardened crafting failed`, error);
