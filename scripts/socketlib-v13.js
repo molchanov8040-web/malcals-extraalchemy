@@ -34,7 +34,7 @@
     const key = `${callerId}:${request.requestId}`;
     const prior = completed.get(key);
     if (prior) return prior;
-    const trustedRequest = { ...request, userId: callerId };
+    const trustedRequest = { ...request, userId: callerId, type };
     let result;
     if (type === "gather") result = await E.resolveGather(trustedRequest);
     else if (type === "research") result = await E.resolveResearch(trustedRequest);
@@ -62,7 +62,10 @@
 
   const previousRequest = E.request;
   E.request = async request => {
-    if (game.user.isGM) return previousRequest(request);
+    if (game.user.isGM) {
+      if (typeof previousRequest !== "function") throw new Error("Базовый обработчик алхимии не загружен.");
+      return previousRequest(request);
+    }
     if (!socket) {
       ui.notifications.error("Socketlib ещё не готов. Перезагрузите мир и повторите действие.");
       return;
@@ -72,7 +75,10 @@
       ui.notifications.error("Эта операция пока не поддерживается через Socketlib.");
       return;
     }
-    const packet = { ...request, requestId: foundry.utils.randomID() };
+    // Only the operation payload is forwarded. In particular, a client cannot
+    // supply identity or a roll total to the GM-side resolver.
+    const { userId: _ignoredUserId, total: _ignoredTotal, ...payload } = request || {};
+    const packet = { ...payload, type: action, requestId: request?.requestId || foundry.utils.randomID() };
     try {
       const handler = action === "gather" ? "eaGather" : action === "research" ? "eaResearch" : "eaBrew";
       const result = await socket.executeAsGM(handler, packet);
