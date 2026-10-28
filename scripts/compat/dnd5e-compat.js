@@ -5,7 +5,20 @@
 
   const systemVersion = () => String(globalThis.game?.system?.version ?? "");
   const major = () => Number.parseInt(systemVersion().split(".")[0], 10) || 0;
-  const numeric = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+  const numeric = value => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "boolean") return value ? 1 : 0;
+    if (value && typeof value === "object") {
+      for (const key of ["value", "total", "mod", "modifier", "bonus", "proficient"]) {
+        if (value[key] != null) {
+          const result = Number(value[key]);
+          if (Number.isFinite(result)) return result;
+        }
+      }
+    }
+    const result = Number(value);
+    return Number.isFinite(result) ? result : 0;
+  };
 
   const abilityModifier = (actor, ability) => {
     const value = actor?.system?.abilities?.[ability]?.mod
@@ -16,8 +29,9 @@
 
   const skillModifier = (actor, skill) => {
     const value = actor?.system?.skills?.[skill]?.mod
-      ?? actor?.system?.skills?.[skill]?.total;
-    return value == null ? 0 : numeric(value);
+      ?? actor?.system?.skills?.[skill]?.total
+      ?? actor?.system?.skills?.[skill]?.value;
+    return numeric(value);
   };
 
   const proficiencyBonus = actor => numeric(
@@ -37,7 +51,7 @@
         .filter(Boolean).join(" ").toLocaleLowerCase();
       if (!wanted.some(alias => label.includes(alias))) continue;
       const proficiency = tool?.prof ?? tool?.proficient ?? tool?.value ?? tool?.proficiency;
-      if (proficiency === true || Number(proficiency) > 0) return Math.max(0, proficiencyBonus(actor));
+      if (proficiency === true || numeric(proficiency) > 0) return Math.max(0, proficiencyBonus(actor));
     }
     return 0;
   };
@@ -58,14 +72,17 @@
     intelligenceModifier: actor => abilityModifier(actor, "int"),
     herbalismBonus: actor => toolProficiency(actor, herbalismAliases),
     alchemyBonus: actor => toolProficiency(actor, alchemyAliases),
-    actorImage: actor => actor?.prototypeToken?.texture?.src || actor?.img || "icons/svg/mystery-man.svg",
-    speaker: actor => globalThis.ChatMessage?.getSpeaker?.({ actor }) ?? { actor: actor?.id }
+    actorImage: actor => actor?.img || actor?.prototypeToken?.texture?.src || "icons/svg/mystery-man.svg",
+    speaker: actor => globalThis.ChatMessage?.getSpeaker?.({ actor }) ?? { actor: actor?.id },
+    rollContext: actor => ({ actorId: actor?.id, actor })
   };
 
-  // Keep the legacy service names available, but make them use the normalized adapter.
+  // Keep legacy service names available, but make them use the normalized adapter.
   EA.toolProficiency = (actor, aliases = []) => toolProficiency(actor, aliases);
   EA.herbalismBonus = actor => toolProficiency(actor, herbalismAliases);
   EA.alchemyBonus = actor => toolProficiency(actor, alchemyAliases);
+  EA.survivalModifier = actor => skillModifier(actor, "sur");
+  EA.intelligenceModifier = actor => abilityModifier(actor, "int");
 
   Hooks.once("ready", () => {
     console.info(`${EA.id} | D&D 5e compatibility adapter active (${systemVersion() || "unknown version"}, major ${major() || "unknown"}).`);
