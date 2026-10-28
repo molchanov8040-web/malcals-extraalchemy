@@ -25,6 +25,7 @@
     "scripts/appv2/default-images-v2.js",
     "scripts/appv2/unified-aspects-v2.js",
     "scripts/appv2/authoritative-workflow-v2.js",
+    "scripts/appv2/security-guard-v2.js",
     "scripts/appv2/release-hardening-v2.js"
   ],
   "styles": ["styles/extraalchemy.css", "styles/appv2/player-app-v2.css", "styles/appv2/crafting-v2.css"],
