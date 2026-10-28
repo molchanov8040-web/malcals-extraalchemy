@@ -53,13 +53,12 @@
       this._eaBrewPending = true;
       if (target) target.disabled = true;
       try {
-        const result = await E.request({
+        await E.request({
           type: "brew",
           actorId: actor.id,
           recipeId,
           ingredients: Array.isArray(this.craftingIngredients) ? this.craftingIngredients : []
         });
-        if (result?.message) notify("info", result.message);
         Hooks.callAll("eaStockChanged");
         await this.render({ force: true });
       } catch (error) {
