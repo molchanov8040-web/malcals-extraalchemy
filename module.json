@@ -2,7 +2,7 @@
   "id": "malcals-extraalchemy",
   "title": "Malcal's ExtraAlchemy",
   "description": "Shared herb gathering, research and crafting tools for Foundry VTT 13 and 14.",
-  "version": "0.8.8.4",
+  "version": "0.8.8.5",
   "compatibility": { "minimum": "13", "verified": "13.351", "maximum": "14" },
   "authors": [{ "name": "Malcal" }],
   "url": "https://github.com/molchanov8040-web/malcals-extraalchemy",
@@ -32,7 +32,7 @@
   ],
   "relationships": {
     "systems": [{ "id": "dnd5e", "type": "system" }],
-    "requires": [{ "id": "socketlib", "type": "module", "manifest": "https://github.com/farling42/foundryvtt-socketlib/releases/latest/download/module.json" }],
+    "requires": [{ "id": "socketlib", "type": "module", "manifest": "https://github.com/farling42/foundryvtt-socketlib/releases/download/v1.1.4/module.json" }],
     "recommends": [{ "id": "midi-qol", "type": "module" }]
   }
 }
