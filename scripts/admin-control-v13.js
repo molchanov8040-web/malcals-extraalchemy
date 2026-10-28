@@ -79,6 +79,11 @@
       else if (action === "library") EA.openLibrary?.();
     }));
   };
+
+  // Keep stable launcher entry points for Foundry settings and older module integrations.
+  EA.openAdmin = openAdmin;
+  EA.openAdminPanel = openAdmin;
+
   Hooks.on("getSceneControlButtons", controls => {
     if (!isGM()) return;
     const tool = { name: "malcals-extraalchemy-admin", title: "Алхимия — панель ведущего", icon: "fa-solid fa-flask-vial", order: 1000, button: true, visible: true, onChange: openAdmin };
