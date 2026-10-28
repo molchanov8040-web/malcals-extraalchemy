@@ -42,6 +42,7 @@
       const systemMajor = Number.parseInt(systemVersion.split(".")[0], 10) || 0;
       const socketModule = globalThis.game?.modules?.get?.("socketlib");
       const socketVersion = String(socketModule?.version ?? "unknown");
+      const normalizedSocketVersion = socketVersion.trim().replace(/^v/i, "");
       const appV2 = Boolean(EA.compat.getApplicationAPI()?.ApplicationV2);
       const expectedSystemMajor = foundryMajor === 13 ? 5 : foundryMajor === 14 ? 6 : 0;
       const issues = [];
@@ -50,7 +51,7 @@
       else if (expectedSystemMajor && systemMajor !== expectedSystemMajor) issues.push(`Target profile expects dnd5e ${expectedSystemMajor}.x on Foundry ${foundryMajor}; detected ${systemVersion || "unknown"}.`);
       if (!appV2) issues.push("ApplicationV2 API is unavailable.");
       if (!socketModule?.active) issues.push("Socketlib is not active.");
-      else if (socketVersion !== "1.1.4") issues.push(`Expected tested Socketlib 1.1.4; detected ${socketVersion}.`);
+      else if (normalizedSocketVersion !== "1.1.4") issues.push(`Target Socketlib version is 1.1.4; detected ${socketVersion}.`);
       return { foundryVersion: version(), foundryMajor, systemId, systemVersion, socketVersion, appV2, issues };
     }
   };
