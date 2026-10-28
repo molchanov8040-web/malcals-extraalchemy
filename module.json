@@ -2,7 +2,7 @@
   "id": "malcals-extraalchemy",
   "title": "Malcal's ExtraAlchemy",
   "description": "Shared herb gathering, research and crafting tools for Foundry VTT 13 and 14.",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "compatibility": { "minimum": "13", "verified": "13.351", "maximum": "14" },
   "authors": [{ "name": "Malcal" }],
   "url": "https://github.com/molchanov8040-web/malcals-extraalchemy",
@@ -17,8 +17,6 @@
     "scripts/final-fix-v13.js",
     "scripts/socketlib-v13.js",
     "scripts/potions-library-v13.js",
-    "scripts/player-interface-v13.js",
-    "scripts/player-workspace-v13.js",
     "scripts/admin-control-v13.js",
     "scripts/appv2/player-app-v2.js",
     "scripts/appv2/gather-button-fix-v2.js",
@@ -27,7 +25,7 @@
     "scripts/appv2/default-images-v2.js",
     "scripts/appv2/herb-aspect-visibility-v2.js"
   ],
-  "styles": ["styles/extraalchemy.css", "styles/player-workspace-v13.css", "styles/appv2/player-app-v2.css", "styles/appv2/crafting-v2.css"],
+  "styles": ["styles/extraalchemy.css", "styles/appv2/player-app-v2.css", "styles/appv2/crafting-v2.css"],
   "languages": [
     { "lang": "ru", "name": "Русский", "path": "lang/ru.json" },
     { "lang": "en", "name": "English", "path": "lang/en.json" }
