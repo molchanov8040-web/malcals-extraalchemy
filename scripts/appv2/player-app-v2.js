@@ -44,7 +44,7 @@
   const actorContext = actor => ({
     id: actor.id,
     name: actor.name,
-    img: dnd().actorImage?.(actor) || actor.img || "icons/svg/mystery-man.svg",
+    img: compat?.documentImage?.(actor, "icons/svg/mystery-man.svg") || actor.img || "icons/svg/mystery-man.svg",
     survival: signed(dnd().survivalModifier?.(actor) ?? 0),
     herb: signed(toolBonus(actor, ["herb", "herbalism", "herbalist"], ["травник", "травнич"])),
     alchemy: signed(toolBonus(actor, ["alchemist", "poisoner", "poison"], ["алхим", "отравитель"])),
