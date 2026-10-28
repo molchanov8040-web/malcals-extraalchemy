@@ -1,36 +1,166 @@
-/* Unified workflow for Foundry VTT 13.351 — patch 0.7.x. */
-(()=>{
-const E=globalThis.EA;if(!E)return;
-const C=`module.${E.id}`, S=()=>E.getState(), R=x=>x?.[0]??x, id=()=>foundry.utils.randomID(), esc=x=>E.esc(x), isGM=()=>E.isAuthoritativeGM();
-E.herb=k=>(E.herbSeeds?.()??[]).find(x=>x.ingredientId===k)||null;
-E.entry=(s,k)=>s.group.stock.find(x=>x.ingredientId===k)||null;
-E.known=(s,k)=>s.group.knownAspects[k]||{};
-E.actors=s=>s.configuration.actorIds.map(k=>game.actors.get(k)).filter(Boolean);
-E.canActor=(u,a,s)=>!!(u?.isGM||(a&&s.configuration.actorIds.includes(a.id)&&a.testUserPermission(u,"OWNER")));
-E.canAlchemy=(u,s)=>!!(u?.isGM||E.actors(s).some(a=>a.testUserPermission(u,"OWNER")));
-E.popup=(title,content,buttons={},render)=>new Dialog({title,content,buttons,render:h=>render?.(R(h))}).render(true);
-E.changed=()=>{Hooks.callAll("eaStockChanged");if(isGM())game.socket.emit(C,{type:"changed"})};
-E.commit=async s=>{await E.saveState(s);E.changed()};
-E.add=(s,h,q=1)=>{const k=h?.ingredientId??h?.seedId,n=Math.max(1,Math.floor(+q||1));if(!k)throw Error("У травы нет идентификатора.");let z=E.entry(s,k);if(z)z.quantity+=n;else{const x=E.herb(k);z={ingredientId:k,quantity:n,name:h.name??x?.name??k,img:h.img??(x?.image?E.herbImagePath(x.image):"icons/svg/item-bag.svg")};s.group.stock.push(z)}return z};
-E.take=(s,k,q=1)=>{const z=E.entry(s,k),n=Math.max(1,Math.floor(+q||1));if(!z||z.quantity<n)throw Error("На складе недостаточно травы.");z.quantity-=n;if(z.quantity===0)s.group.stock=s.group.stock.filter(x=>x!==z)};
-E.total=(s,list)=>{const out={};for(const x of list){const k=x.ingredientId,n=Math.max(1,Math.floor(+x.quantity||1)),a=E.known(s,k);for(const [aspect,value] of Object.entries(a))out[aspect]=(out[aspect]||0)+value*n}return out};
-E.matches=(recipe,available)=>Object.entries(recipe.requirements||{}).every(([k,n])=>(available[k]||0)>=n);
-E.pick=(s,types)=>{const allow=s.configuration.allowedHerbIds||[];if(!allow.length)return null;const selected=Array.isArray(types)?types:[];const choices=(E.herbSeeds?.()||[]).filter(h=>allow.includes(h.ingredientId)&&(h.regions||[]).includes(s.configuration.activeTerritory)&&(!selected.length||((h.types||h.goals||[]).some(t=>selected.includes(t)))));return choices.length?choices[Math.floor(Math.random()*choices.length)]:null};
-E.resolveGather=async d=>{const s=S(),u=game.users.get(d.userId),a=game.actors.get(d.actorId);if(!u||!a||!E.canActor(u,a,s))throw Error("Нет доступа к персонажу.");const success=Number(d.total)>=s.configuration.gatherDC,h={id:id(),timestamp:Date.now(),actorName:a.name,territory:s.configuration.activeTerritory,goals:Array.isArray(d.goals)?d.goals:[],total:Number(d.total)||0,success,result:""};if(success){const herb=E.pick(s,h.goals);if(herb){E.add(s,herb,1);h.result=`Успех: найдена трава «${herb.name}».`}else h.result="Успех, но для территории и выбранных целей нет разрешённых трав."}else h.result="Неудача: подходящих ингредиентов не найдено.";s.group.gatherHistory.unshift(h);await E.commit(s);return{message:h.result}};
-E.resolveResearch=async d=>{const s=S(),u=game.users.get(d.userId),k=d.ingredientId;if(!u||!E.canAlchemy(u,s))throw Error("Нет доступа к алхимии группы.");if(!E.entry(s,k))throw Error("Трава отсутствует на складе.");const herb=E.herb(k);if(!herb)throw Error("Трава отсутствует в библиотеке.");const known=E.known(s,k),unknown=Object.entries(herb.aspects||{}).filter(([a])=>!Object.hasOwn(known,a));if(!unknown.length)throw Error("Все аспекты этой травы уже известны.");const [aspect,value]=unknown[Math.floor(Math.random()*unknown.length)];E.take(s,k,1);s.group.knownAspects[k]={...known,[aspect]:value};await E.commit(s);return{research:true,aspect,value}};
-E.resolveBrew=async d=>{const s=S(),u=game.users.get(d.userId),actor=game.actors.get(d.actorId),recipe=s.recipes.find(x=>x.id===d.recipeId),items=(d.ingredients||[]).map(x=>({ingredientId:x.ingredientId,quantity:Math.max(1,Math.floor(+x.quantity||1))}));if(!u||!actor||!E.canActor(u,actor,s))throw Error("Нет доступа к персонажу.");if(!recipe)throw Error("Рецепт не найден.");if(!u.isGM&&!recipe.playersKnow)throw Error("Рецепт неизвестен игрокам.");if(!items.length||!E.matches(recipe,E.total(s,items)))throw Error("Недостаточно известных аспектов.");for(const item of items)E.take(s,item.ingredientId,item.quantity);const success=Number(d.total)>=recipe.brewDC;let message="Провал: ингредиенты израсходованы.";if(success){const out=recipe.output||{},quantity=Math.max(1,Number(Number(d.total)>=recipe.brewDC+5?out.criticalQuantity:out.quantity)||1),name=out.itemName||recipe.name;await actor.createEmbeddedDocuments("Item",[{name,type:"consumable",img:"icons/consumables/potions/bottle-round-corked-red.webp",system:{quantity,type:{value:"potion"},description:{value:`<p>${esc(recipe.description||"Алхимический состав.")}</p>`}},flags:{[E.id]:{recipeId:recipe.id}}}]);message=`Успех: создано «${name}» × ${quantity}.`}s.group.brewHistory.unshift({id:id(),timestamp:Date.now(),actorName:actor.name,recipeId:recipe.id,recipeName:recipe.name,total:Number(d.total)||0,dc:recipe.brewDC,success,ingredients:items});await E.commit(s);return{message}};
-E.socket=async d=>{if(d.type==="changed"){Hooks.callAll("eaStockChanged");return}if(d.type==="result"&&d.userId===game.user.id){if(d.error)ui.notifications.error(d.error);else if(d.result?.research)E.popup("Исследование",`<p>Открыт аспект: <b>${esc(E.aspects[d.result.aspect]||d.result.aspect)}: ${d.result.value}</b>.</p>`,{ok:{label:"Понятно"}});else ui.notifications.info(d.result?.message||"Операция завершена.");Hooks.callAll("eaStockChanged");return}if(!isGM()||!["gather","research","brew"].includes(d.type))return;try{const result=d.type==="gather"?await E.resolveGather(d):d.type==="research"?await E.resolveResearch(d):await E.resolveBrew(d);game.socket.emit(C,{type:"result",userId:d.userId,result})}catch(error){game.socket.emit(C,{type:"result",userId:d.userId,error:error.message||String(error)})}};
-Hooks.once("ready",()=>game.socket.on(C,d=>{if(d?.type==="changed")Hooks.callAll("eaStockChanged");}));
-E.request=async d=>{d.userId=game.user.id;if(!isGM()){game.socket.emit(C,d);return}try{const result=d.type==="gather"?await E.resolveGather(d):d.type==="research"?await E.resolveResearch(d):await E.resolveBrew(d);if(result.research)E.popup("Исследование",`<p>Открыт аспект: <b>${esc(E.aspects[result.aspect]||result.aspect)}: ${result.value}</b>.</p>`,{ok:{label:"Понятно"}});else ui.notifications.info(result.message)}catch(error){ui.notifications.error(error.message||String(error))}};
-E.config=()=>{if(!game.user.isGM)return;const s=S(),herbs=E.herbSeeds?.()||[],actors=Array.from(game.actors).filter(a=>a.type==="character"),content=`<section class="ea-panel"><label>Персонажи<select id="ea-actors" multiple size="6">${actors.map(a=>`<option value="${a.id}"${s.configuration.actorIds.includes(a.id)?" selected":""}>${esc(a.name)}</option>`).join("")}</select></label><label>Территория<select id="ea-territory">${s.configuration.territories.map(x=>`<option${x===s.configuration.activeTerritory?" selected":""}>${esc(x)}</option>`).join("")}</select></label><div class="ea-add-location"><input id="ea-new" placeholder="Новая локация"><button id="ea-addloc" type="button">Добавить</button></div><button id="ea-delloc" type="button">Удалить выбранную территорию</button><label>СЛ сбора<input id="ea-dc" type="number" min="1" value="${s.configuration.gatherDC}"></label><fieldset><legend>Разрешённые травы</legend>${herbs.map(h=>`<label class="ea-check"><input name="ea-herb" type="checkbox" value="${h.ingredientId}"${s.configuration.allowedHerbIds.includes(h.ingredientId)?" checked":""}>${esc(h.name)}</label>`).join("")}</fieldset></section>`;E.popup("Алхимия — настройка",content,{save:{label:"Сохранить",callback:async h=>{const r=R(h);s.configuration.actorIds=Array.from(r.querySelector("#ea-actors").selectedOptions).map(x=>x.value);s.configuration.activeTerritory=r.querySelector("#ea-territory").value;s.configuration.gatherDC=Math.max(1,+r.querySelector("#ea-dc").value||10);s.configuration.allowedHerbIds=Array.from(r.querySelectorAll("[name='ea-herb']:checked")).map(x=>x.value);const newer=r.querySelector("#ea-new").value.trim();if(newer&&!s.configuration.territories.includes(newer))s.configuration.territories.push(newer);const del=r.querySelector("#ea-territory").value;if(r.querySelector("#ea-delloc").dataset.remove==="1"&&s.configuration.territories.length>1){s.configuration.territories=s.configuration.territories.filter(x=>x!==del);s.configuration.activeTerritory=s.configuration.territories[0]}await E.commit(s);ui.notifications.info("Настройки сохранены.")}},close:{label:"Закрыть"}},r=>{r.querySelector("#ea-addloc").onclick=()=>{const x=r.querySelector("#ea-new").value.trim();if(x&&!s.configuration.territories.includes(x)){s.configuration.territories.push(x);const o=document.createElement("option");o.textContent=x;r.querySelector("#ea-territory").append(o)}r.querySelector("#ea-new").value=""};r.querySelector("#ea-delloc").onclick=()=>r.querySelector("#ea-delloc").dataset.remove="1"})};
-E.stock=()=>{const s=S(),items=s.group.stock.map(x=>`<li><img src="${esc(x.img)}" width="32" height="32">${esc(x.name)} × ${x.quantity}<button data-remove="${x.ingredientId}">−</button><button data-know="${x.ingredientId}">Изучить аспект</button></li>`).join("")||"<li>На складе пусто.</li>";E.popup("Алхимия — склад",`<section class="ea-panel"><ul>${items}</ul><p>${esc(E.aspectText(s.group.knownAspects))}</p></section>`,{close:{label:"Закрыть"}},r=>r.querySelectorAll("[data-remove]").forEach(b=>b.onclick=async()=>{const n=S();E.take(n,b.dataset.remove,1);await E.commit(n);r.closest(".app")?.remove();E.stock()}))};
-E.gather=()=>{const s=S(),actors=E.actors(s).filter(a=>E.canActor(game.user,a,s));if(!actors.length)return ui.notifications.warn("Мастер должен назначить персонажа в настройках.");const remembered=(()=>{try{return JSON.parse(localStorage.getItem(`${E.id}-gather-types`)||"[]")}catch{return[]}})(),content=`<section class="ea-panel"><label>Персонаж<select id="ea-gather-actor">${actors.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("")}</select></label><p>Территория: <b>${esc(s.configuration.activeTerritory)}</b></p>${E.goalChecks(remembered)}<p class="notes">СЛ сбора устанавливает только ГМ.</p></section>`;E.popup("Алхимия — сбор",content,{gather:{label:"Собрать",callback:async html=>{const root=html?.[0]??html,actor=game.actors.get(root.querySelector("#ea-gather-actor").value),goals=E.selectedGoals(root);if(!actor)return ui.notifications.error("Персонаж не найден.");const mod=Number(E.dnd5e?.survivalModifier?.(actor)||0),tool=Number(E.herbalismBonus?.(actor)||0),roll=await new Roll("1d20 + @mod + @tool",{mod,tool}).evaluate();await roll.toMessage({speaker:E.dnd5e?.speaker?.(actor)||{actor:actor.id},flavor:`Сбор трав: Выживание/Мудрость ${mod>=0?"+":""}${mod}${tool?`, инструменты травника ${tool>=0?"+":""}${tool}`:""}`});await E.request({type:"gather",actorId:actor.id,goals,total:roll.total})}},close:{label:"Закрыть"}},r=>{})};
-E.selected=r=>Array.from(r.querySelectorAll("[name='ea-ing']:checked")).map(x=>({ingredientId:x.value,quantity:Math.max(1,Math.floor(+r.querySelector(`[data-q='${x.value}']`)?.value||1))}));
-E.crafting=()=>{const s=S(),actors=E.actors(s).filter(a=>E.canActor(game.user,a,s));if(!actors.length)return ui.notifications.warn("Мастер должен назначить персонажа в настройках.");const rows=s.group.stock.map(x=>`<label class="ea-check"><input name="ea-ing" type="checkbox" value="${x.ingredientId}">${esc(x.name)} × ${x.quantity}<input data-q="${x.ingredientId}" type="number" min="1" max="${x.quantity}" value="1"></label>`).join("")||"<p>Общий склад пуст.</p>",content=`<section class="ea-panel"><label>Алхимик<select id="ea-crafter">${actors.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("")}</select></label><p>Исследование расходует одну траву и открывает один неизвестный аспект.</p>${rows}</section>`;E.popup("Алхимия — изготовление",content,{research:{label:"Исследовать свойства",callback:h=>{const list=E.selected(R(h));if(list.length!==1)return ui.notifications.warn("Выберите ровно одну траву.");E.request({type:"research",ingredientId:list[0].ingredientId})}},compatible:{label:"Проверить возможные рецепты",callback:h=>{const r=R(h),list=E.selected(r);if(!list.length)return ui.notifications.warn("Выберите травы.");E.compatible(r.querySelector("#ea-crafter").value,list)}},close:{label:"Закрыть"}})};
-E.compatible=(actorId,list)=>{const s=S(),available=E.total(s,list),recipes=s.recipes.filter(r=>(game.user.isGM||r.playersKnow)&&E.matches(r,available)),content=`<section class="ea-panel"><p>Известные аспекты: ${esc(E.aspectText(available))}</p>${recipes.length?`<ul>${recipes.map(r=>`<li><b>${esc(r.name)}</b> — ${esc(E.aspectText(r.requirements))}; СЛ ${r.brewDC} <button data-brew="${r.id}">Изготовить</button></li>`).join("")}</ul>`:"<p>Подходящих рецептов нет.</p>"}</section>`;E.popup("Подходящие рецепты",content,{close:{label:"Закрыть"}},r=>r.querySelectorAll("[data-brew]").forEach(b=>b.onclick=async()=>{const actor=game.actors.get(actorId),mod=Number(E.dnd5e?.intelligenceModifier?.(actor)||0),proficiency=Number(E.alchemyBonus?.(actor)||0),roll=await new Roll("1d20 + @mod + @tool",{mod,tool:proficiency}).evaluate();await roll.toMessage({speaker:E.dnd5e?.speaker?.(actor)||{actor:actor.id},flavor:`Изготовление алхимического состава: Интеллект ${mod>=0?"+":""}${mod}${proficiency?`, алхимический набор ${proficiency>=0?"+":""}${proficiency}`:""}`});await E.request({type:"brew",actorId,recipeId:b.dataset.brew,ingredients:list,total:roll.total})}))};
-E.knownRecipes=()=>{const s=S(),recipes=s.recipes.filter(r=>r.playersKnow!==false),rows=recipes.map(r=>`<li><b>${esc(r.name)}</b> — ${esc(E.aspectText(r.requirements))}; СЛ ${r.brewDC}<br>${esc(r.description||"")}</li>`).join("")||"<li>Пока нет известных рецептов.</li>";E.popup("Известные рецепты",`<section class="ea-panel"><ul>${rows}</ul></section>`,{close:{label:"Закрыть"}})};
-E.recipes=()=>{if(!game.user.isGM)return;const draw=()=>{const s=S(),rows=s.recipes.map(r=>`<li><b>${esc(r.name)}</b> — ${esc(E.aspectText(r.requirements))}; СЛ ${r.brewDC}<label><input class="ea-known" data-id="${r.id}" type="checkbox"${r.playersKnow?" checked":""}> Известен игрокам</label><button class="ea-delete" data-id="${r.id}">Удалить</button></li>`).join("")||"<li>Нет рецептов.</li>",content=`<section class="ea-panel"><h3>Рецепты</h3><ul>${rows}</ul><hr><h3>Добавить рецепт</h3><label>Название<input id="ea-rname"></label><div id="ea-reqs"><div class="ea-requirement"><select class="ea-ra">${E.aspectOptions("Vita")}</select><input class="ea-rq" type="number" min="1" value="1"><button type="button" class="ea-delrow">Удалить строку</button></div></div><button type="button" id="ea-addrow">Добавить аспект</button><label>СЛ изготовления<input id="ea-rdc" type="number" min="1" value="10"></label><label><input id="ea-rknown" type="checkbox" checked> Известен игрокам</label><button type="button" id="ea-create">Добавить рецепт</button></section>`;E.popup("Алхимия — рецепты",content,{close:{label:"Закрыть"}},root=>{root.querySelectorAll(".ea-known").forEach(x=>x.onchange=async()=>{const st=S(),recipe=st.recipes.find(y=>y.id===x.dataset.id);if(recipe){recipe.playersKnow=x.checked;await E.commit(st)}});root.querySelectorAll(".ea-delete").forEach(x=>x.onclick=async()=>{const st=S();st.recipes=st.recipes.filter(y=>y.id!==x.dataset.id);await E.commit(st);root.closest(".app")?.remove();draw()});root.querySelector("#ea-addrow").onclick=()=>{const div=document.createElement("div");div.className="ea-requirement";div.innerHTML=`<select class="ea-ra">${E.aspectOptions("")}</select><input class="ea-rq" type="number" min="1" value="1"><button type="button" class="ea-delrow">Удалить строку</button>`;root.querySelector("#ea-reqs").append(div);div.querySelector(".ea-delrow").onclick=()=>div.remove()};root.querySelectorAll(".ea-delrow").forEach(b=>b.onclick=()=>b.closest(".ea-requirement").remove());root.querySelector("#ea-create").onclick=async()=>{const st=S(),name=root.querySelector("#ea-rname").value.trim()||"Новый рецепт",requirements={};root.querySelectorAll(".ea-requirement").forEach(row=>{const aspect=row.querySelector(".ea-ra").value,n=Math.max(1,Math.floor(+row.querySelector(".ea-rq").value||1));requirements[aspect]=(requirements[aspect]||0)+n});if(!Object.keys(requirements).length)return ui.notifications.warn("Добавьте хотя бы один аспект.");st.recipes.push(E.normalizeRecipe({id:id(),name,requirements,brewDC:Math.max(1,+root.querySelector("#ea-rdc").value||10),playersKnow:root.querySelector("#ea-rknown").checked,output:{itemName:name,quantity:1,criticalQuantity:2}}));await E.commit(st);root.closest(".app")?.remove();draw()}})};draw()};
-E.resetAllData=async()=>{if(!game.user.isGM)throw Error("Сброс доступен только ГМ.");await E.commit(E.defaultState());ui.notifications.info("Данные алхимии сброшены.")};
-E.openPanel=name=>({config:E.config,gather:E.gather,stock:E.stock,crafting:E.crafting,experiments:E.crafting,recipes:E.recipes,knownRecipes:E.knownRecipes,library:E.openLibrary}[name]?.());
-E.hub=()=>{const gm=game.user.isGM?`<button data-p="config"><i class="fas fa-cog"></i> Настройка</button><button data-p="recipes"><i class="fas fa-book"></i> Рецепты</button><button data-p="library"><i class="fas fa-leaf"></i> Библиотека трав</button>`:"";E.popup("Инструменты алхимии",`<section class="ea-panel"><div class="ea-actions">${gm}<button data-p="knownRecipes"><i class="fas fa-book-open"></i> Известные рецепты</button><button data-p="gather"><i class="fas fa-seedling"></i> Сбор</button><button data-p="stock"><i class="fas fa-box"></i> Склад</button><button data-p="crafting"><i class="fas fa-flask"></i> Изготовление</button></div></section>`,{close:{label:"Закрыть"}},root=>root.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>E.openPanel(b.dataset.p)))};
+/* Shared workflow services for Foundry VTT 13/14. */
+(() => {
+  const E = globalThis.EA;
+  if (!E) return;
+
+  const root = value => value?.[0] ?? value;
+  const id = () => foundry.utils.randomID();
+  const isGM = () => !!game.user?.isGM;
+  const authoritativeGM = () => isGM() && game.users.activeGM?.id === game.user.id;
+  const state = () => E.getState();
+
+  E.herb = key => (E.herbSeeds?.() || []).find(herb => herb.ingredientId === key) || null;
+  E.entry = (current, key) => (current.group.stock || []).find(item => item.ingredientId === key) || null;
+  E.known = (current, key) => current.group.knownAspects?.[key] || {};
+  E.actors = current => (current.configuration.actorIds || []).map(key => game.actors.get(key)).filter(Boolean);
+  E.canActor = (user, actor, current) => Boolean(user?.isGM || (actor && current.configuration.actorIds.includes(actor.id) && actor.testUserPermission?.(user, "OWNER")));
+  E.canAlchemy = (user, current) => Boolean(user?.isGM || E.actors(current).some(actor => actor.testUserPermission?.(user, "OWNER")));
+
+  E.popup = (title, content, buttons = {}, render) => new Dialog({
+    title,
+    content,
+    buttons,
+    render: html => render?.(root(html))
+  }).render(true);
+
+  E.changed = () => {
+    Hooks.callAll("eaStockChanged");
+    if (authoritativeGM()) game.socket.emit(`module.${E.id}`, { type: "changed" });
+  };
+  E.commit = async current => {
+    await E.saveState(current);
+    E.changed();
+  };
+
+  E.add = (current, herb, quantity = 1) => {
+    const ingredientId = herb?.ingredientId ?? herb?.seedId;
+    const amount = Math.max(1, Math.floor(Number(quantity) || 1));
+    if (!ingredientId) throw new Error("У растения нет идентификатора.");
+    let item = E.entry(current, ingredientId);
+    if (item) item.quantity = Number(item.quantity || 0) + amount;
+    else {
+      item = {
+        ingredientId,
+        quantity: amount,
+        name: herb.name || ingredientId,
+        img: herb.image ? E.herbImagePath?.(herb.image) || herb.image : "icons/svg/item-bag.svg"
+      };
+      current.group.stock.push(item);
+    }
+    return item;
+  };
+  E.take = (current, ingredientId, quantity = 1) => {
+    const item = E.entry(current, ingredientId);
+    const amount = Math.max(1, Math.floor(Number(quantity) || 1));
+    if (!item || Number(item.quantity || 0) < amount) throw new Error("На складе недостаточно растения.");
+    item.quantity -= amount;
+    if (item.quantity <= 0) current.group.stock = current.group.stock.filter(entry => entry !== item);
+  };
+  E.total = (current, ingredients) => {
+    const totals = {};
+    for (const ingredient of ingredients || []) {
+      const quantity = Math.max(1, Math.floor(Number(ingredient.quantity) || 1));
+      for (const [aspect, value] of Object.entries(E.known(current, ingredient.ingredientId))) {
+        totals[aspect] = (totals[aspect] || 0) + Number(value || 0) * quantity;
+      }
+    }
+    return totals;
+  };
+  E.matches = (recipe, available) => Object.entries(recipe?.requirements || {}).every(([aspect, needed]) => Number(available?.[aspect] || 0) >= Number(needed || 0));
+  E.pick = (current, goals) => {
+    const allowed = current.configuration.allowedHerbIds || [];
+    const selected = Array.isArray(goals) ? goals : [];
+    const choices = (E.herbSeeds?.() || []).filter(herb => allowed.includes(herb.ingredientId) && (herb.regions || []).includes(current.configuration.activeTerritory) && (!selected.length || (herb.types || herb.goals || []).some(type => selected.includes(type))));
+    return choices.length ? choices[Math.floor(Math.random() * choices.length)] : null;
+  };
+
+  E.resolveGather = async request => {
+    const current = state();
+    const user = game.users.get(request?.userId);
+    const actor = game.actors.get(request?.actorId);
+    if (!user || !actor || !E.canActor(user, actor, current)) throw new Error("Нет доступа к персонажу.");
+    const total = Number(request.total) || 0;
+    const success = total >= current.configuration.gatherDC;
+    const result = { id: id(), timestamp: Date.now(), actorName: actor.name, territory: current.configuration.activeTerritory, goals: Array.isArray(request.goals) ? request.goals : [], total, success, result: "" };
+    if (success) {
+      const herb = E.pick(current, result.goals);
+      result.result = herb ? `Успех: найдена трава «${herb.name}».` : "Успех, но подходящее растение не найдено.";
+      if (herb) E.add(current, herb, 1);
+    } else result.result = "Неудача: подходящее растение не найдено.";
+    current.group.gatherHistory.unshift(result);
+    await E.commit(current);
+    return { message: result.result };
+  };
+
+  E.resolveResearch = async request => {
+    const current = state();
+    const user = game.users.get(request?.userId);
+    const ingredientId = request?.ingredientId;
+    if (!user || !E.canAlchemy(user, current)) throw new Error("Нет доступа к алхимии группы.");
+    if (!E.entry(current, ingredientId)) throw new Error("Растение отсутствует на складе.");
+    const herb = E.herb(ingredientId);
+    if (!herb) throw new Error("Растение отсутствует в библиотеке.");
+    const known = E.known(current, ingredientId);
+    const unknown = Object.entries(herb.aspects || {}).filter(([aspect]) => !Object.hasOwn(known, aspect));
+    if (!unknown.length) throw new Error("Все аспекты этого растения уже известны.");
+    const [aspect, value] = unknown[Math.floor(Math.random() * unknown.length)];
+    E.take(current, ingredientId, 1);
+    current.group.knownAspects[ingredientId] = { ...known, [aspect]: value };
+    await E.commit(current);
+    return { research: true, aspect, value };
+  };
+
+  E.resolveBrew = async request => {
+    const current = state();
+    const user = game.users.get(request?.userId);
+    const actor = game.actors.get(request?.actorId);
+    const recipe = current.recipes.find(item => item.id === request?.recipeId);
+    const ingredients = (request?.ingredients || []).map(item => ({ ingredientId: item.ingredientId, quantity: Math.max(1, Math.floor(Number(item.quantity) || 1)) }));
+    if (!user || !actor || !E.canActor(user, actor, current)) throw new Error("Нет доступа к персонажу.");
+    if (!recipe) throw new Error("Рецепт не найден.");
+    if (!user.isGM && recipe.playersKnow === false) throw new Error("Рецепт неизвестен игрокам.");
+    if (!ingredients.length || !E.matches(recipe, E.total(current, ingredients))) throw new Error("Недостаточно известных аспектов.");
+    for (const ingredient of ingredients) E.take(current, ingredient.ingredientId, ingredient.quantity);
+    const total = Number(request.total) || 0;
+    const success = total >= recipe.brewDC;
+    let message = "Провал: ингредиенты израсходованы.";
+    if (success) {
+      const output = recipe.output || {};
+      const quantity = Math.max(1, Number(total >= recipe.brewDC + 5 ? output.criticalQuantity : output.quantity) || 1);
+      const name = output.itemName || recipe.name;
+      await actor.createEmbeddedDocuments("Item", [{
+        name,
+        type: "consumable",
+        img: output.img || "icons/consumables/potions/bottle-round-corked-red.webp",
+        system: { quantity, description: { value: `<p>${E.esc(recipe.description || "Алхимический состав.")}</p>` } },
+        flags: { [E.id]: { recipeId: recipe.id } }
+      }]);
+      message = `Успех: создано «${name}» × ${quantity}.`;
+    }
+    current.group.brewHistory.unshift({ id: id(), timestamp: Date.now(), actorName: actor.name, recipeId: recipe.id, recipeName: recipe.name, total, dc: recipe.brewDC, success, ingredients });
+    await E.commit(current);
+    return { message };
+  };
+
+  E.config = () => {
+    if (!isGM()) return;
+    const current = state();
+    const herbs = E.herbSeeds?.() || [];
+    const content = `<section class="ea-panel"><label>Персонажи<select id="ea-actors" multiple size="6">${Array.from(game.actors || []).filter(actor => actor.type === "character").map(actor => `<option value="${actor.id}"${current.configuration.actorIds.includes(actor.id) ? " selected" : ""}>${E.esc(actor.name)}</option>`).join("")}</select></label><label>Территория<select id="ea-territory">${current.configuration.territories.map(place => `<option${place === current.configuration.activeTerritory ? " selected" : ""}>${E.esc(place)}</option>`).join("")}</select></label><label>СЛ сбора<input id="ea-dc" type="number" min="1" value="${current.configuration.gatherDC}"></label><fieldset><legend>Разрешённые растения</legend>${herbs.map(herb => `<label class="ea-check"><input name="ea-herb" type="checkbox" value="${herb.ingredientId}"${current.configuration.allowedHerbIds.includes(herb.ingredientId) ? " checked" : ""}>${E.esc(herb.name)}</label>`).join("")}</fieldset></section>`;
+    E.popup("Алхимия — настройка", content, { save: { label: "Сохранить", callback: async html => {
+      const view = root(html);
+      current.configuration.actorIds = Array.from(view.querySelector("#ea-actors").selectedOptions).map(option => option.value);
+      current.configuration.activeTerritory = view.querySelector("#ea-territory").value;
+      current.configuration.gatherDC = Math.max(1, Number(view.querySelector("#ea-dc").value) || 10);
+      current.configuration.allowedHerbIds = Array.from(view.querySelectorAll("input[name='ea-herb']:checked")).map(input => input.value);
+      await E.commit(current);
+      ui.notifications.info("Настройки алхимии сохранены.");
+    } }, close: { label: "Закрыть" } });
+  };
+
+  E.stock = () => E.openAdminStock?.();
+  E.openPanel = name => ({ config: E.config, gather: E.gather, stock: E.stock, crafting: E.crafting, experiments: E.crafting, recipes: E.recipes, knownRecipes: E.knownRecipes, library: E.openLibrary, adminStock: E.openAdminStock }[name]?.());
+  E.hub = () => E.popup("Инструменты алхимии", `<section class="ea-panel"><button data-ea-panel="gather">Сбор</button><button data-ea-panel="stock">Склад</button><button data-ea-panel="crafting">Изготовление</button><button data-ea-panel="knownRecipes">Известные рецепты</button>${isGM() ? `<button data-ea-panel="config">Настройка</button><button data-ea-panel="recipes">Рецепты</button>` : ""}</section>`, { close: { label: "Закрыть" } }, view => view.querySelectorAll("[data-ea-panel]").forEach(button => button.onclick = () => E.openPanel(button.dataset.eaPanel)));
+
+  console.info(`${E.id} | shared workflow services registered.`);
 })();
