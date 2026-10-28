@@ -103,10 +103,9 @@
         if (!recipe) return ui.notifications.error("Рецепт не найден.");
         target.disabled = true;
         try {
-          const mod = Number(dnd().intelligenceModifier?.(actor) ?? 0), tool = Number(EA.alchemyBonus?.(actor) || 0);
-          const roll = await new Roll("1d20 + @mod + @tool", { mod, tool }).evaluate();
-          await roll.toMessage({ speaker: dnd().speaker?.(actor) || { actor: actor.id }, flavor: "Изготовление алхимического состава" });
-          const response = await EA.request({ type: "brew", actorId: actor.id, recipeId, ingredients: this.craftingIngredients || [], total: roll.total });
+          // The GM-authoritative workflow performs the only roll. The client sends
+          // the selected actor, recipe and ingredients but never a roll total.
+          const response = await EA.request({ type: "brew", actorId: actor.id, recipeId, ingredients: this.craftingIngredients || [] });
           if (response?.message) ui.notifications.info(response.message);
           Hooks.callAll("eaStockChanged");
           this.render({ force: true });
