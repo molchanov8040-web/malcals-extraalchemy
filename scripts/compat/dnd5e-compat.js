@@ -20,19 +20,17 @@
     return Number.isFinite(result) ? result : 0;
   };
 
-  const abilityModifier = (actor, ability) => {
-    const value = actor?.system?.abilities?.[ability]?.mod
+  const abilityModifier = (actor, ability) => numeric(
+    actor?.system?.abilities?.[ability]?.mod
       ?? actor?.system?.abilities?.[ability]?.modifier
-      ?? actor?.system?.abilities?.[ability]?.value;
-    return numeric(value);
-  };
+      ?? actor?.system?.abilities?.[ability]?.value
+  );
 
-  const skillModifier = (actor, skill) => {
-    const value = actor?.system?.skills?.[skill]?.mod
+  const skillModifier = (actor, skill) => numeric(
+    actor?.system?.skills?.[skill]?.mod
       ?? actor?.system?.skills?.[skill]?.total
-      ?? actor?.system?.skills?.[skill]?.value;
-    return numeric(value);
-  };
+      ?? actor?.system?.skills?.[skill]?.value
+  );
 
   const proficiencyBonus = actor => numeric(
     actor?.system?.attributes?.prof
@@ -40,18 +38,35 @@
       ?? actor?.system?.bonuses?.prof
   );
 
+  const aliasesOf = aliases => (Array.isArray(aliases) ? aliases : [aliases])
+    .map(value => String(value ?? "").trim().toLocaleLowerCase())
+    .filter(Boolean);
+
   const toolProficiency = (actor, aliases = []) => {
-    const tools = actor?.system?.tools;
-    if (!tools || typeof tools !== "object") return 0;
-    const wanted = (Array.isArray(aliases) ? aliases : [aliases])
-      .map(value => String(value).trim().toLocaleLowerCase())
-      .filter(Boolean);
-    for (const [key, tool] of Object.entries(tools)) {
-      const label = [key, tool?.label, tool?.name, tool?.custom, tool?.identifier]
+    if (!actor) return 0;
+    const wanted = aliasesOf(aliases);
+    if (!wanted.length) return 0;
+    const tools = actor.system?.tools;
+    if (tools && typeof tools === "object") {
+      for (const [key, tool] of Object.entries(tools)) {
+        const label = [key, tool?.label, tool?.name, tool?.custom, tool?.identifier]
+          .filter(Boolean).join(" ").toLocaleLowerCase();
+        if (!wanted.some(alias => label.includes(alias))) continue;
+        const value = tool?.prof ?? tool?.proficient ?? tool?.value ?? tool?.proficiency;
+        if (value === true || numeric(value) > 0) return Math.max(0, proficiencyBonus(actor));
+      }
+    }
+
+    // Some system versions/worlds represent tool proficiency with owned tool items.
+    // Treat an item as proficiency evidence only when its label matches and its data
+    // explicitly marks proficiency; mere possession of a tool is not proficiency.
+    for (const item of actor.items ?? []) {
+      if (item.type !== "tool") continue;
+      const label = [item.name, item.system?.identifier, item.system?.toolType]
         .filter(Boolean).join(" ").toLocaleLowerCase();
       if (!wanted.some(alias => label.includes(alias))) continue;
-      const proficiency = tool?.prof ?? tool?.proficient ?? tool?.value ?? tool?.proficiency;
-      if (proficiency === true || numeric(proficiency) > 0) return Math.max(0, proficiencyBonus(actor));
+      const value = item.system?.proficient ?? item.system?.proficiency;
+      if (value === true || numeric(value) > 0) return Math.max(0, proficiencyBonus(actor));
     }
     return 0;
   };
