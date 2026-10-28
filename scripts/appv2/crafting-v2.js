@@ -1,4 +1,4 @@
-/* ApplicationV2 crafting workflow for Foundry VTT 13. */
+/* ApplicationV2 crafting workflow for Foundry VTT 13/14. */
 (() => {
   const EA = globalThis.EA;
   const Base = EA?.PlayerApplicationV2;
@@ -7,6 +7,7 @@
     return;
   }
   const esc = value => EA.esc(value);
+  const dnd = () => EA.dnd5e || {};
   const signed = value => `${Number(value) >= 0 ? "+" : ""}${Number(value) || 0}`;
   const selectedActor = () => {
     const ids = EA.getState()?.configuration?.actorIds || [];
@@ -66,7 +67,9 @@
     }
     const stock = state?.group?.stock || [], selected = new Map((app.craftingIngredients || []).map(entry => [entry.ingredientId, entry]));
     const cards = stock.map(item => stockCard(item, selected.get(item.ingredientId))).join("");
-    return `<section class="ea-v2-panel ea-v2-crafting-panel"><div class="ea-v2-panel-heading"><div><h2>Изготовление</h2><p class="ea-v2-muted">${actor ? `Алхимик: <b>${esc(actor.name)}</b> · Интеллект ${signed(actor.system?.abilities?.int?.mod || 0)} · набор ${signed(EA.alchemyBonus?.(actor) || 0)}` : "Нет доступного персонажа."}</p></div></div><div class="ea-v2-craft-grid">${cards || `<p class="ea-v2-empty">Склад пуст.</p>`}</div><footer class="ea-v2-crafting-footer"><button type="button" class="ea-v2-action" data-action="craft-check" ${actor && stock.length ? "" : "disabled"}>Проверить возможные рецепты</button></footer></section>`;
+    const intelligence = actor ? dnd().intelligenceModifier?.(actor) ?? 0 : 0;
+    const alchemy = actor ? EA.alchemyBonus?.(actor) || 0 : 0;
+    return `<section class="ea-v2-panel ea-v2-crafting-panel"><div class="ea-v2-panel-heading"><div><h2>Изготовление</h2><p class="ea-v2-muted">${actor ? `Алхимик: <b>${esc(actor.name)}</b> · Интеллект ${signed(intelligence)} · набор ${signed(alchemy)}` : "Нет доступного персонажа."}</p></div></div><div class="ea-v2-craft-grid">${cards || `<p class="ea-v2-empty">Склад пуст.</p>`}</div><footer class="ea-v2-crafting-footer"><button type="button" class="ea-v2-action" data-action="craft-check" ${actor && stock.length ? "" : "disabled"}>Проверить возможные рецепты</button></footer></section>`;
   };
   const basePrepare = Base.prototype._prepareContext;
   Base.prototype._prepareContext = async function() {
@@ -100,9 +103,9 @@
         if (!recipe) return ui.notifications.error("Рецепт не найден.");
         target.disabled = true;
         try {
-          const mod = Number(actor.system?.abilities?.int?.mod || 0), tool = Number(EA.alchemyBonus?.(actor) || 0);
+          const mod = Number(dnd().intelligenceModifier?.(actor) ?? 0), tool = Number(EA.alchemyBonus?.(actor) || 0);
           const roll = await new Roll("1d20 + @mod + @tool", { mod, tool }).evaluate();
-          await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: "Изготовление алхимического состава" });
+          await roll.toMessage({ speaker: dnd().speaker?.(actor) || { actor: actor.id }, flavor: "Изготовление алхимического состава" });
           const response = await EA.request({ type: "brew", actorId: actor.id, recipeId, ingredients: this.craftingIngredients || [], total: roll.total });
           if (response?.message) ui.notifications.info(response.message);
           Hooks.callAll("eaStockChanged");
