@@ -159,7 +159,22 @@
   };
 
   E.stock = () => E.openAdminStock?.();
-  E.openPanel = name => ({ config: E.config, gather: E.gather, stock: E.stock, crafting: E.crafting, experiments: E.crafting, recipes: E.recipes, knownRecipes: E.knownRecipes, library: E.openLibrary, adminStock: E.openAdminStock }[name]?.());
+  E.openPanel = name => {
+    if (name === "crafting" || name === "experiments") {
+      const app = E.openPlayerAppV2?.();
+      if (!app) {
+        ui.notifications?.error?.("Интерфейс ApplicationV2 недоступен.");
+        return;
+      }
+      app.mode = "crafting";
+      app.craftingStage = "ingredients";
+      app.craftingIngredients = [];
+      app.craftingPage = 0;
+      app.render({ force: true });
+      return app;
+    }
+    return ({ config: E.config, gather: E.gather, stock: E.stock, recipes: E.recipes, knownRecipes: E.knownRecipes, library: E.openLibrary, adminStock: E.openAdminStock }[name]?.());
+  };
   E.hub = () => E.popup("Инструменты алхимии", `<section class="ea-panel"><button data-ea-panel="gather">Сбор</button><button data-ea-panel="stock">Склад</button><button data-ea-panel="crafting">Изготовление</button><button data-ea-panel="knownRecipes">Известные рецепты</button>${isGM() ? `<button data-ea-panel="config">Настройка</button><button data-ea-panel="recipes">Рецепты</button>` : ""}</section>`, { close: { label: "Закрыть" } }, view => view.querySelectorAll("[data-ea-panel]").forEach(button => button.onclick = () => E.openPanel(button.dataset.eaPanel)));
 
   console.info(`${E.id} | shared workflow services registered.`);
