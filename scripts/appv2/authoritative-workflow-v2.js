@@ -47,10 +47,15 @@
     const mod = Number(gather ? dnd.survivalModifier(actor) : dnd.intelligenceModifier(actor));
     const tool = Number(gather ? dnd.herbalismBonus(actor) : dnd.alchemyBonus(actor));
     if (!Number.isFinite(mod) || !Number.isFinite(tool)) throw new Error("Не удалось определить бонус персонажа.");
-    const roll = await new Roll("1d20 + @mod + @tool", { mod, tool }).evaluate();
-    if (!Number.isFinite(Number(roll.total))) throw new Error("Не удалось выполнить бросок.");
+    const RollClass = globalThis.Roll || globalThis.foundry?.dice?.Roll;
+    if (typeof RollClass !== "function") throw new Error("API бросков Foundry недоступен.");
+    const roll = new RollClass("1d20 + @mod + @tool", { mod, tool });
+    await roll.evaluate({ async: true });
+    const total = Number(roll.total);
+    if (!Number.isFinite(total)) throw new Error("Не удалось вычислить результат броска.");
+    if (typeof roll.toMessage !== "function") throw new Error("API сообщения броска Foundry недоступен.");
     await roll.toMessage({ speaker: dnd.speaker(actor), flavor: gather ? "Сбор трав: проверка ведущего" : "Изготовление алхимического состава: проверка ведущего" });
-    return Number(roll.total);
+    return total;
   };
   const oldGather = E.resolveGather, oldResearch = E.resolveResearch, oldBrew = E.resolveBrew;
   if ([oldGather, oldResearch, oldBrew].some(fn => typeof fn !== "function")) {
@@ -93,7 +98,6 @@
     const total = await gmRoll(actor, "brew");
     return oldBrew({ ...request, ingredients, total });
   });
-  // This queue is local to one active GM client, not a cross-client transaction lock.
   const Base = E.PlayerApplicationV2;
   if (Base?.DEFAULT_OPTIONS?.actions) {
     const selectedActor = () => {
@@ -110,12 +114,11 @@
       if (!actor) return ui.notifications.warn("Назначенный персонаж не найден или недоступен.");
       if (!goals.length) return ui.notifications.warn("Выберите хотя бы один тип трав.");
       this.gatherGoals = goals;
-      try { localStorage.setItem(`${E.id}.appv2-gather-goals.${game.user?.id ?? "unknown"}`, JSON.stringify(goals)); } catch {}
       this.gathering = true;
       this.gatherResult = "Ожидание проверки ведущего…";
       try {
         await this.render({ force: true });
-        const result = await E.request({ type: "gather", actorId: actor.id, goals });
+        const result = await E.request({ type: "gather", actorId: actor.id, goals, requestId: foundry.utils.randomID() });
         this.gatherResult = result?.message || "Запрос не выполнен; подробности доступны в уведомлении.";
       } catch (error) {
         console.error(`${E.id} | Gather failed`, error);
@@ -132,7 +135,7 @@
       this._eaBrewPending = true;
       if (target) target.disabled = true;
       try {
-        await E.request({ type: "brew", actorId: actor.id, recipeId, ingredients: this.craftingIngredients || [] });
+        await E.request({ type: "brew", actorId: actor.id, recipeId, ingredients: this.craftingIngredients || [], requestId: foundry.utils.randomID() });
         await this.render({ force: true });
       } catch (error) {
         console.error(`${E.id} | Crafting failed`, error);
