@@ -34,7 +34,7 @@
     const key = `${callerId}:${request.requestId}`;
     const prior = completed.get(key);
     if (prior) return prior;
-    const trustedRequest = { ...request, userId: callerId };
+    const trustedRequest = { ...request, userId: callerId, type };
     let result;
     if (type === "gather") result = await E.resolveGather(trustedRequest);
     else if (type === "research") result = await E.resolveResearch(trustedRequest);
@@ -62,7 +62,10 @@
 
   const previousRequest = E.request;
   E.request = async request => {
-    if (game.user.isGM) return previousRequest(request);
+    if (game.user.isGM) {
+      if (typeof previousRequest !== "function") throw new Error("Базовый обработчик алхимии не загружен.");
+      return previousRequest(request);
+    }
     if (!socket) {
       ui.notifications.error("Socketlib ещё не готов. Перезагрузите мир и повторите действие.");
       return;
@@ -72,7 +75,10 @@
       ui.notifications.error("Эта операция пока не поддерживается через Socketlib.");
       return;
     }
-    const packet = { ...request, requestId: foundry.utils.randomID() };
+    // Only the operation payload is forwarded. In particular, a client cannot
+    // supply identity or a roll total to the GM-side resolver.
+    const { userId: _ignoredUserId, total: _ignoredTotal, ...payload } = request || {};
+    const packet = { ...payload, type: action, requestId: request?.requestId || foundry.utils.randomID() };
     try {
       const handler = action === "gather" ? "eaGather" : action === "research" ? "eaResearch" : "eaBrew";
       const result = await socket.executeAsGM(handler, packet);
@@ -94,13 +100,13 @@
   const saveGoals = goals => localStorage.setItem(clientGoalsKey, JSON.stringify(goals));
   const toolHint = (bonus, name) => bonus > 0 ? `<p class="notes">Владение ${name}: +${bonus} к проверке.</p>` : `<p class="notes">Владение ${name} не обнаружено: бонус владения не добавляется.</p>`;
 
-  // Replaces the old gather view so the survival/Wisdom roll includes herbalism-tool proficiency.
+  // Legacy launcher retained for compatibility; the authoritative GM performs the roll.
   E.gather = () => {
     const state = E.getState();
     const actors = E.actors(state).filter(actor => E.canActor(game.user, actor, state));
     if (!actors.length) return ui.notifications.warn("Мастер должен назначить вашего персонажа в настройках алхимии.");
     const remembered = savedGoals();
-    const content = `<section class="ea-panel"><label>Персонаж<select id="ea-gather-actor">${actors.map(actor => `<option value="${actor.id}">${E.esc(actor.name)}</option>`).join("")}</select></label><p>Территория: <b>${E.esc(state.configuration.activeTerritory)}</b></p><div id="ea-herbalism-hint"></div>${E.goalChecks(remembered)}<p class="notes">СЛ сбора устанавливает только ГМ.</p></section>`;
+    const content = `<section class="ea-panel"><label>Персонаж<select id="ea-gather-actor">${actors.map(actor => `<option value="${actor.id}">${E.esc(actor.name)}</option>`).join("")}</select></label><p>Территория: <b>${E.esc(state.configuration.activeTerritory)}</b></p><div id="ea-herbalism-hint"></div>${E.goalChecks(remembered)}<p class="notes">СЛ сбора и бросок выполняет ведущий.</p></section>`;
     E.popup("Алхимия — сбор", content, {
       gather: { label: "Собрать", callback: async html => {
         const root = html?.[0] ?? html;
@@ -108,11 +114,7 @@
         if (!actor) return ui.notifications.error("Персонаж не найден.");
         const goals = E.selectedGoals(root);
         saveGoals(goals);
-        const mod = Number(actor.system?.skills?.sur?.mod ?? actor.system?.abilities?.wis?.mod ?? 0);
-        const tool = Number(E.herbalismBonus?.(actor) || 0);
-        const roll = await new Roll("1d20 + @mod + @tool", { mod, tool }).evaluate();
-        await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Сбор трав: Выживание/Мудрость ${mod >= 0 ? "+" : ""}${mod}${tool ? `, инструменты травника +${tool}` : ""}` });
-        await E.request({ type: "gather", actorId: actor.id, goals, total: roll.total });
+        await E.request({ type: "gather", actorId: actor.id, goals });
       } },
       close: { label: "Закрыть" }
     }, html => {
@@ -126,7 +128,7 @@
     });
   };
 
-  // Replaces compatibility view so crafting rolls include alchemist-supplies proficiency.
+  // Legacy recipe view retained for compatibility; the authoritative GM performs the roll.
   E.compatible = (actorId, list) => {
     const state = E.getState(), available = E.total(state, list);
     const recipes = state.recipes.filter(recipe => (game.user.isGM || recipe.playersKnow !== false) && E.matches(recipe, available));
@@ -136,11 +138,7 @@
       root.querySelectorAll("[data-brew]").forEach(button => button.onclick = async () => {
         const recipeActor = game.actors.get(actorId);
         if (!recipeActor) return ui.notifications.error("Алхимик не найден.");
-        const mod = Number(recipeActor.system?.abilities?.int?.mod || 0);
-        const proficiency = Number(E.alchemyBonus?.(recipeActor) || 0);
-        const roll = await new Roll("1d20 + @mod + @tool", { mod, tool: proficiency }).evaluate();
-        await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: recipeActor }), flavor: `Изготовление алхимического состава: Интеллект ${mod >= 0 ? "+" : ""}${mod}${proficiency ? `, алхимический набор +${proficiency}` : ""}` });
-        await E.request({ type: "brew", actorId, recipeId: button.dataset.brew, ingredients: list, total: roll.total });
+        await E.request({ type: "brew", actorId, recipeId: button.dataset.brew, ingredients: list });
       });
     });
   };
