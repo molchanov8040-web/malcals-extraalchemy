@@ -6,8 +6,8 @@
   "compatibility": { "minimum": "13", "verified": "14.369", "maximum": "14" },
   "authors": [{ "name": "Malcal" }],
   "url": "https://github.com/molchanov8040-web/malcals-extraalchemy",
-  "manifest": "https://raw.githubusercontent.com/molchanov8040-web/malcals-extraalchemy/feature/foundry-13-14-compatibility/module.json",
-  "download": "https://github.com/molchanov8040-web/malcals-extraalchemy/archive/refs/heads/feature/foundry-13-14-compatibility.zip",
+  "manifest": "https://raw.githubusercontent.com/molchanov8040-web/malcals-extraalchemy/main/module.json",
+  "download": "https://github.com/molchanov8040-web/malcals-extraalchemy/archive/refs/heads/main.zip",
   "socket": true,
   "esmodules": [
     "scripts/extraalchemy.js",
