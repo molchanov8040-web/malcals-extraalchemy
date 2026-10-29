@@ -1,4 +1,4 @@
-/* GM recipe editor with explicit output Item UUID resolution. */
+/* GM recipe editor with explicit output Item UUID and visual aspect requirements. */
 (() => {
   const EA = globalThis.EA;
   if (!EA) return;
@@ -12,14 +12,32 @@
     if (globalThis.foundry?.utils?.fromUuid) return foundry.utils.fromUuid(uuid);
     throw new Error("UUID-загрузка недоступна в этой версии Foundry.");
   };
+  const requirementRows = requirements => Object.entries(EA.aspects || {}).map(([key, name]) => {
+    const value = Number(requirements?.[key]);
+    const amount = Number.isFinite(value) && value > 0 ? value : "";
+    return `<label class="ea-recipe-aspect-row"><span class="ea-recipe-aspect-name">${esc(name)} <small>(${esc(key)})</small></span><input type="number" min="0" step="any" inputmode="decimal" data-requirement-aspect="${esc(key)}" value="${esc(amount)}" placeholder="0" aria-label="Требуемое значение аспекта: ${esc(name)}"></label>`;
+  }).join("");
+  const readRequirements = form => {
+    const requirements = {};
+    form.querySelectorAll("[data-requirement-aspect]").forEach(input => {
+      const value = Number(input.value);
+      if (Number.isFinite(value) && value > 0) requirements[input.dataset.requirementAspect] = value;
+    });
+    return requirements;
+  };
+  const updateRequirementSummary = form => {
+    const count = Object.keys(readRequirements(form)).length;
+    const summary = form.querySelector("[data-requirement-summary]");
+    if (summary) summary.textContent = count ? `Выбрано аспектов: ${count}` : "Аспекты не заданы — рецепт не будет найден по составу.";
+  };
   const formContent = recipe => {
     const output = recipe?.output || {};
     return `<form class="ea-recipe-editor" autocomplete="off">
       <div class="form-group"><label>Название рецепта</label><input name="name" type="text" value="${esc(recipe?.name || "")}" required></div>
-      <div class="form-group"><label>UUID готового предмета</label><div style="display:flex;gap:.4rem"><input name="outputUuid" type="text" value="${esc(output.uuid || "")}" placeholder="Compendium.pack.Item.id" style="flex:1"><button type="button" data-load-output>Загрузить</button></div><p class="hint">Вставьте UUID предмета из мира или компендиума. После загрузки название и изображение результата будут автоматически привязаны к предмету.</p></div>
+      <div class="form-group"><label>UUID готового предмета</label><div style="display:flex;gap:.4rem"><input name="outputUuid" type="text" value="${esc(output.uuid || "")}" placeholder="Compendium.pack-name.Item.id" style="flex:1"><button type="button" data-load-output>Загрузить</button></div><p class="hint">Вставьте UUID предмета из мира или компендиума. Название и изображение результата будут автоматически привязаны к предмету.</p></div>
       <div class="form-group"><label>Название готового предмета</label><input name="outputName" type="text" value="${esc(output.itemName || "")}" readonly></div>
       <div class="form-group"><label>Изображение результата</label><div style="display:flex;align-items:center;gap:.6rem"><img data-output-preview src="${esc(output.img || "icons/svg/potion.svg")}" alt="" style="width:48px;height:48px;object-fit:contain"><input name="outputImg" type="text" value="${esc(output.img || "")}" readonly style="flex:1"></div></div>
-      <div class="form-group"><label>Требуемые аспекты (JSON)</label><textarea name="requirements" rows="3" required>${esc(JSON.stringify(recipe?.requirements || {}, null, 2))}</textarea></div>
+      <fieldset class="ea-recipe-aspects"><legend>Необходимые аспекты</legend><p class="hint">Укажите минимальное значение каждого аспекта. JSON вручную вводить не требуется: пустое поле означает, что аспект не нужен.</p><div class="ea-recipe-aspect-grid">${requirementRows(recipe?.requirements || {})}</div><div style="display:flex;align-items:center;gap:.6rem;margin-top:.5rem"><button type="button" data-clear-requirements>Очистить аспекты</button><span class="hint" data-requirement-summary></span></div></fieldset>
       <div class="form-group"><label>Сложность изготовления</label><input name="brewDC" type="number" min="1" step="1" value="${Math.max(1, Number(recipe?.brewDC) || 10)}"></div>
       <div class="form-group"><label>Описание / формула</label><textarea name="description" rows="3">${esc(recipe?.description || "")}</textarea></div>
       <label><input name="playersKnow" type="checkbox"${recipe?.playersKnow !== false ? " checked" : ""}> Рецепт известен игрокам</label>
@@ -38,10 +56,7 @@
           const root = html[0] || html;
           const form = root.querySelector("form");
           const values = new FormData(form);
-          let requirements;
-          try { requirements = JSON.parse(String(values.get("requirements") || "{}")); }
-          catch { return ui.notifications.error("Требования должны быть корректным JSON."); }
-          if (!requirements || typeof requirements !== "object" || Array.isArray(requirements)) return ui.notifications.error("Требования должны быть JSON-объектом.");
+          const requirements = readRequirements(form);
           const uuid = String(values.get("outputUuid") || "").trim() || null;
           let output = { ...draft.output };
           if (uuid) {
@@ -68,6 +83,7 @@
             output: { ...output, quantity: Math.max(1, Number(output.quantity) || 1), criticalQuantity: Math.max(1, Number(output.criticalQuantity) || 1) }
           };
           const state = getState();
+          state.recipes = Array.isArray(state.recipes) ? state.recipes : [];
           const index = state.recipes.findIndex(r => r.id === recipe.id);
           if (index < 0) state.recipes.push(recipe); else state.recipes[index] = recipe;
           try { await saveState(state); ui.notifications.info(existing ? "Рецепт обновлён." : "Рецепт добавлен."); }
@@ -78,6 +94,13 @@
       default: "save",
       render: html => {
         const root = html[0] || html;
+        const form = root.querySelector("form");
+        updateRequirementSummary(form);
+        root.querySelector("[data-clear-requirements]")?.addEventListener("click", () => {
+          root.querySelectorAll("[data-requirement-aspect]").forEach(input => { input.value = ""; });
+          updateRequirementSummary(form);
+        });
+        root.querySelectorAll("[data-requirement-aspect]").forEach(input => input.addEventListener("input", () => updateRequirementSummary(form)));
         root.querySelector("[data-load-output]")?.addEventListener("click", async event => {
           const form = event.currentTarget.closest("form");
           const status = form.querySelector("[data-output-status]");
@@ -111,7 +134,7 @@
   EA.editRecipe = editRecipe;
   EA.recipes = () => {
     if (!game.user?.isGM) return ui.notifications.warn("Редактировать рецепты может только ведущий.");
-    const rows = (getState()?.recipes || []).map(recipe => `<li><b>${esc(recipe.name)}</b> — ${esc(JSON.stringify(recipe.requirements || {}))}; СЛ ${Number(recipe.brewDC) || 10}; ${esc(recipe.output?.itemName || "Предмет не привязан")} <button type="button" data-edit-recipe="${esc(recipe.id)}">Изменить</button></li>`).join("") || "<li>Рецептов пока нет.</li>";
+    const rows = (getState()?.recipes || []).map(recipe => `<li><b>${esc(recipe.name)}</b> — ${esc(EA.aspectText?.(recipe.requirements || {}) || "аспекты не заданы")}; СЛ ${Number(recipe.brewDC) || 10}; ${esc(recipe.output?.itemName || "Предмет не привязан")} <button type="button" data-edit-recipe="${esc(recipe.id)}">Изменить</button></li>`).join("") || "<li>Рецептов пока нет.</li>";
     new Dialog({ title: "Алхимия — рецепты", content: `<section class="ea-panel"><ul>${rows}</ul><button type="button" data-add-recipe>Добавить рецепт</button></section>`, buttons: { close: { label: "Закрыть" } }, render: html => {
       const root = html[0] || html;
       root.querySelector("[data-add-recipe]")?.addEventListener("click", () => editRecipe());
