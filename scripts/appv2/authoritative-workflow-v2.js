@@ -40,21 +40,32 @@
     if (!user || !actor || !E.canActor(user, actor, state)) throw new Error("Нет доступа к персонажу.");
     return { user, actor };
   };
-  const gmRoll = async (actor, type) => {
+  const recipeToolKind = recipe => {
+    const explicit = recipe?.output?.tool ?? recipe?.output?.toolKind ?? recipe?.tool ?? recipe?.toolKind;
+    if (explicit) return explicit;
+    const text = [recipe?.name, recipe?.description, recipe?.output?.itemName].filter(Boolean).join(" ").toLocaleLowerCase();
+    return /яд|отрав|poison|venom|antidote/.test(text) ? "poisoner" : "alchemy";
+  };
+  const gmRoll = async (actor, type, recipe = null) => {
     const dnd = E.dnd5e;
     if (!dnd) throw new Error("Адаптер D&D 5e не загружен.");
     const gather = type === "gather";
-    const mod = Number(gather ? dnd.survivalModifier(actor) : dnd.intelligenceModifier(actor));
-    const tool = Number(gather ? dnd.herbalismBonus(actor) : dnd.alchemyBonus(actor));
+    const toolCheck = gather ? null : dnd.toolCheck?.(actor, recipeToolKind(recipe));
+    const mod = gather ? Number(dnd.survivalModifier(actor)) : 0;
+    const tool = gather ? Number(dnd.herbalismBonus(actor)) : Number(toolCheck?.total);
     if (!Number.isFinite(mod) || !Number.isFinite(tool)) throw new Error("Не удалось определить бонус персонажа.");
     const RollClass = globalThis.Roll || globalThis.foundry?.dice?.Roll;
     if (typeof RollClass !== "function") throw new Error("API бросков Foundry недоступен.");
-    const roll = new RollClass("1d20 + @mod + @tool", { mod, tool });
+    const formula = gather ? "1d20 + @mod + @tool" : "1d20 + @tool";
+    const roll = new RollClass(formula, { mod, tool });
     await roll.evaluate({ async: true });
     const total = Number(roll.total);
     if (!Number.isFinite(total)) throw new Error("Не удалось вычислить результат броска.");
     if (typeof roll.toMessage !== "function") throw new Error("API сообщения броска Foundry недоступен.");
-    await roll.toMessage({ speaker: dnd.speaker(actor), flavor: gather ? "Сбор трав: проверка ведущего" : "Изготовление алхимического состава: проверка ведущего" });
+    const flavor = gather
+      ? "Сбор трав: проверка ведущего"
+      : `Изготовление: ${toolCheck?.name || "набор"} (${toolCheck?.ability || "int"})`;
+    await roll.toMessage({ speaker: dnd.speaker(actor), flavor });
     return total;
   };
   const oldGather = E.resolveGather, oldResearch = E.resolveResearch, oldBrew = E.resolveBrew;
@@ -95,7 +106,7 @@
       if (Number(E.entry(state, item.ingredientId)?.quantity || 0) < item.quantity) throw new Error("На складе недостаточно растения.");
     }
     if (!E.matches(recipe, E.total(state, ingredients))) throw new Error("Недостаточно известных аспектов.");
-    const total = await gmRoll(actor, "brew");
+    const total = await gmRoll(actor, "brew", recipe);
     return oldBrew({ ...request, ingredients, total });
   });
   const Base = E.PlayerApplicationV2;
