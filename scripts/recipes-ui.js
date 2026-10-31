@@ -134,11 +134,29 @@
   EA.editRecipe = editRecipe;
   EA.recipes = () => {
     if (!game.user?.isGM) return ui.notifications.warn("Редактировать рецепты может только ведущий.");
-    const rows = (getState()?.recipes || []).map(recipe => `<li><b>${esc(recipe.name)}</b> — ${esc(EA.aspectText?.(recipe.requirements || {}) || "аспекты не заданы")}; СЛ ${Number(recipe.brewDC) || 10}; ${esc(recipe.output?.itemName || "Предмет не привязан")} <button type="button" data-edit-recipe="${esc(recipe.id)}">Изменить</button></li>`).join("") || "<li>Рецептов пока нет.</li>";
+    const rows = (getState()?.recipes || []).map(recipe => `<li><b>${esc(recipe.name)}</b> — ${esc(EA.aspectText?.(recipe.requirements || {}) || "аспекты не заданы")}; СЛ ${Number(recipe.brewDC) || 10}; ${esc(recipe.output?.itemName || "Предмет не привязан")} <button type="button" data-edit-recipe="${esc(recipe.id)}">Изменить</button> <button type="button" data-delete-recipe="${esc(recipe.id)}">Удалить</button></li>`).join("") || "<li>Рецептов пока нет.</li>";
     new Dialog({ title: "Алхимия — рецепты", content: `<section class="ea-panel"><ul>${rows}</ul><button type="button" data-add-recipe>Добавить рецепт</button></section>`, buttons: { close: { label: "Закрыть" } }, render: html => {
       const root = html[0] || html;
       root.querySelector("[data-add-recipe]")?.addEventListener("click", () => editRecipe());
       root.querySelectorAll("[data-edit-recipe]").forEach(button => button.addEventListener("click", () => editRecipe(button.dataset.editRecipe)));
+      root.querySelectorAll("[data-delete-recipe]").forEach(button => button.addEventListener("click", async () => {
+        if (!game.user?.isGM) return ui.notifications.warn("Удалять рецепты может только ведущий.");
+        const id = button.dataset.deleteRecipe;
+        const recipe = getState()?.recipes?.find(entry => entry.id === id);
+        if (!recipe) return ui.notifications.warn("Рецепт уже удалён или не найден.");
+        const confirmed = await Dialog.confirm({ title: "Удалить рецепт", content: `<p>Удалить рецепт «${esc(recipe.name)}»? Это действие нельзя отменить.</p>` });
+        if (!confirmed) return;
+        try {
+          const state = getState();
+          state.recipes = (state.recipes || []).filter(entry => entry.id !== id);
+          await saveState(state);
+          ui.notifications.info(`Рецепт «${recipe.name}" удалён.`);
+          EA.recipes();
+        } catch (error) {
+          console.error(`${EA.id} | Recipe delete failed`, error);
+          ui.notifications.error(error?.message || "Не удалось удалить рецепт.");
+        }
+      }));
     }}).render(true);
   };
 })();
