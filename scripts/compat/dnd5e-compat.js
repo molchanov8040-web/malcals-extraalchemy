@@ -44,10 +44,11 @@
     .map(value => String(value ?? "").trim().toLocaleLowerCase())
     .filter(Boolean);
   const normalizeAbility = value => {
-    const raw = typeof value === "object" ? value?.key ?? value?.id ?? value?.ability : value;
+    const candidate = Array.isArray(value) ? value.find(item => item != null && String(item).trim()) : value;
+    const raw = candidate && typeof candidate === "object" ? candidate.key ?? candidate.id ?? candidate.ability : candidate;
     const key = String(raw ?? "").trim().toLocaleLowerCase();
     const names = { strength: "str", dexterity: "dex", constitution: "con", intelligence: "int", wisdom: "wis", charisma: "cha" };
-    return names[key] || key.slice(0, 3);
+    return names[key] || (key.length >= 3 ? key.slice(0, 3) : "");
   };
   const aliasesFor = kind => {
     if (Array.isArray(kind)) return kind;
@@ -104,7 +105,7 @@
     const savedTotal = directTotal(entry);
     const total = savedTotal != null ? savedTotal : abilityMod + proficiency + bonus;
     return {
-      total: Number.isFinite(total) ? total : 0,
+      total: Number.isFinite(total) ? total : abilityMod + proficiency + bonus,
       ability,
       abilityModifier: abilityMod,
       proficiency,
@@ -112,7 +113,7 @@
       proficient: proficiency > 0,
       toolId: found?.id || null,
       source: found?.source || "fallback",
-      name: entry.label || entry.name || found?.id || (String(kind).includes("poison") ? "Набор отравителя" : "Алхимический набор")
+      name: entry.label || entry.name || found?.id || (String(kind).toLocaleLowerCase().includes("poison") ? "Набор отравителя" : "Алхимический набор")
     };
   };
   const herbalismAliases = aliasesFor("herbalism");
@@ -139,7 +140,6 @@
     speaker: actor => globalThis.ChatMessage?.getSpeaker?.({ actor }) ?? { actor: actor?.id },
     rollContext: actor => ({ actorId: actor?.id, actor })
   };
-
   EA.toolCheck = (actor, kind = "alchemy") => toolCheck(actor, kind);
   EA.resolveToolCheck = EA.toolCheck;
   EA.toolProficiency = (actor, aliases = []) => toolCheck(actor, aliases).proficiency;
@@ -148,7 +148,6 @@
   EA.poisonerBonus = actor => toolCheck(actor, poisonerAliases).total;
   EA.survivalModifier = actor => skillModifier(actor, "sur");
   EA.intelligenceModifier = actor => abilityModifier(actor, "int");
-
   Hooks.once("ready", () => {
     console.info(`${EA.id} | D&D 5e compatibility adapter active (${systemVersion() || "unknown version"}, major ${major() || "unknown"}).`);
   });
