@@ -1,5 +1,5 @@
 /* Malcal's ExtraAlchemy core — Foundry VTT 13/14 compatibility branch. */
-const EA=globalThis.EA={id:"malcals-extraalchemy",version:"0.9.0.1"};
+const EA=globalThis.EA={id:"malcals-extraalchemy",version:"0.9.0.2"};
 EA.aspects={Vita:"Жизнь",Herba:"Растение",Aqua:"Вода",Ignis:"Огонь",Mortuus:"Смерть",Venenum:"Яд",Motus:"Движение",Sensus:"Чувства",Corpus:"Тело",Praecantatio:"Магия",Terra:"Земля"};
 EA.goals=[["healing","Лечебные"],["poisonous","Ядовитые"],["elemental","Стихийные"],["rare_magic","Редкие и магические"]];
 EA.esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -21,8 +21,9 @@ EA.selectedGoals=r=>Array.from(r.querySelectorAll("input[name='ea-goal']:checked
 EA.aspectText=a=>Object.entries(a??{}).map(([k,v])=>`${EA.aspects[k]??k}: ${v}`).join(", ")||"свойства ещё не изучены";
 EA.aspectOptions=s=>Object.entries(EA.aspects).map(([k,n])=>`<option value="${k}"${k===s?" selected":""}>${EA.esc(n)}</option>`).join("");
 EA.toolProficiency=(actor,aliases=[])=>EA.dnd5e?.toolProficiency?.(actor,aliases)??0;
+EA.toolCheck=(actor,kind="alchemy")=>EA.dnd5e?.toolCheck?.(actor,kind)??{total:0,ability:"int",abilityModifier:0,proficiency:0,bonus:0,proficient:false,source:"fallback",toolId:null,name:"Набор"};
 EA.herbalismBonus=actor=>EA.dnd5e?.herbalismBonus?.(actor)??0;
-EA.alchemyBonus=actor=>EA.dnd5e?.alchemyBonus?.(actor)??0;
+EA.alchemyBonus=actor=>EA.dnd5e?.alchemyBonus?.(actor)??EA.toolCheck(actor,"alchemy").total;
 EA.request=async request=>{if(!game.user?.isGM)throw new Error("Запрос должен быть обработан активным ГМом через Socketlib.");const type=request?.type;const resolver=type==="gather"?EA.resolveGather:type==="research"?EA.resolveResearch:type==="brew"?EA.resolveBrew:null;if(typeof resolver!=="function")throw new Error("Обработчик операции алхимии не загружен.");const result=await resolver({...request,userId:game.user.id});if(result?.research)EA.popup?.("Исследование",`<p>Открыт аспект: <b>${EA.esc(EA.aspects[result.aspect]||result.aspect)}: ${result.value}</b>.</p>`,{ok:{label:"Понятно"}});else if(result?.message)ui.notifications.info(result.message);Hooks.callAll("eaStockChanged");return result};
 class AlchemyLauncher extends FormApplication{get template(){return `modules/${EA.id}/templates/launcher.hbs`}static get defaultOptions(){return foundry.utils.mergeObject(super.defaultOptions,{id:"ea-settings-launcher",title:"Инструменты алхимии",width:430,height:"auto",closeOnSubmit:false})}activateListeners(html){super.activateListeners(html);const r=html[0]??html;r.querySelectorAll("[data-ea-open]").forEach(b=>b.onclick=e=>{e.preventDefault();EA.openPanel(b.dataset.eaOpen)});r.querySelector("[data-ea-reset]")?.addEventListener("click",async e=>{e.preventDefault();if(await Dialog.confirm({title:"Сбросить алхимию",content:"<p>Удалить настройки, склад, знания, историю и рецепты?</p>"})){await EA.resetAllData();this.render(true)}})}async _updateObject(){}}
 Hooks.once("init",()=>{game.settings.register(EA.id,"state",{scope:"world",config:false,type:Object,default:EA.defaultState()});game.settings.registerMenu(EA.id,"launcher",{name:"Инструменты алимии",label:"Открыть панели",hint:"Открыть ГМ-панель алхимии.",icon:"fas fa-flask",type:AlchemyLauncher,restricted:true})});
