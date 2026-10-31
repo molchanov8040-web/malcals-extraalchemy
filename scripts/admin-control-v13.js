@@ -13,15 +13,26 @@
     const renderRow = (id, name, aspects, orphan = false) => {
       const known = state.group.knownAspects[id] || {};
       const count = Number(state.group.stock.find(item => item.ingredientId === id)?.quantity || 0);
-      const checks = Object.entries(aspects).map(([key, value]) => `<tr><td>${esc(EA.aspects[key] || key)}: ${esc(value)}</td><td><input type="checkbox" class="ea-stock-aspect" value="${esc(key)}"${Object.hasOwn(known, key) ? " checked" : ""} aria-label="Доступен игрокам и при изготовлении: ${esc(EA.aspects[key] || key)}"></td></tr>`).join("");
-      const editor = orphan ? `<p>Растение отсутствует в библиотеке; его можно убрать со склада.</p>` : `<table><thead><tr><th>Аспект</th><th>Показывать игрокам и разрешить при изготовлении</th></tr></thead><tbody>${checks || '<tr><td colspan="2">Аспектов нет.</td></tr>'}</tbody></table><p>Одна настройка управляет и отображением аспекта игрокам, и его использованием при проверке рецептов и изготовлении. Неотмеченные аспекты недоступны игрокам и не учитываются при изготовлении.</p><button type="button" data-stock-action="aspects">Сохранить доступность аспектов</button>`;
-      return `<details class="ea-herb-edit" data-stock-herb="${esc(id)}"><summary>${esc(name)} — на складе: <span class="ea-stock-count">${count}</span></summary><label>Количество <input class="ea-stock-quantity" type="number" min="1" step="1" value="1"></label>${orphan ? "" : '<button type="button" data-stock-action="add">Добавить на склад</button>'}<button type="button" data-stock-action="remove">Убрать количество</button><button type="button" data-stock-action="remove-all">Убрать всё</button>${editor}</details>`;
+      const controls = Object.entries(aspects).map(([key, baseValue]) => {
+        const isKnown = Object.hasOwn(known, key);
+        const amount = Number(isKnown ? known[key] : baseValue);
+        const safeAmount = Number.isFinite(amount) && amount >= 0 ? amount : 0;
+        return `<label class="ea-stock-aspect-row" style="display:grid;grid-template-columns:auto 1fr minmax(5rem,7rem);align-items:center;gap:.5rem;margin:.25rem 0"><input type="checkbox" class="ea-stock-aspect-enabled" value="${esc(key)}"${isKnown ? " checked" : ""} aria-label="Включить аспект ${esc(EA.aspects[key] || key)}"><span>${esc(EA.aspects[key] || key)} <small>(${esc(key)})</small></span><input type="number" class="ea-stock-aspect-quantity" data-aspect="${esc(key)}" min="0" step="any" value="${esc(safeAmount)}" aria-label="Количество аспекта ${esc(EA.aspects[key] || key)}"${isKnown ? "" : " disabled"}></label>`;
+      }).join("");
+      const editor = orphan ? `<p>Растение отсутствует в библиотеке; его можно убрать со склада.</p>` : `<fieldset><legend>Известные игрокам аспекты и количество</legend><p>Отметьте аспект, чтобы открыть его игрокам и учитывать при изготовлении. Для каждого отмеченного аспекта задайте количество.</p>${controls || "<p>Аспектов нет.</p>"}<button type="button" data-stock-action="aspects">Сохранить аспекты</button></fieldset>`;
+      return `<details class="ea-herb-edit" data-stock-herb="${esc(id)}"><summary>${esc(name)} — на складе: <span class="ea-stock-count">${count}</span></summary><label>Количество травы <input class="ea-stock-quantity" type="number" min="1" step="1" value="1"></label>${orphan ? "" : '<button type="button" data-stock-action="add">Добавить на склад</button>'}<button type="button" data-stock-action="remove">Убрать количество</button><button type="button" data-stock-action="remove-all">Убрать всё</button>${editor}</details>`;
     };
     const rows = herbs.map(herb => renderRow(herb.ingredientId, herb.name, herb.aspects || {})).join("");
     const orphans = state.group.stock.filter(item => !ids.has(item.ingredientId)).map(item => renderRow(item.ingredientId, item.name || item.ingredientId, {}, true)).join("");
-    const content = `<section class="ea-panel ea-admin-stock"><p>Выберите растение. Отмеченные аспекты доступны игрокам и учитываются при изготовлении. Неотмеченные аспекты скрыты от игроков и не используются в расчёте подходящих рецептов. Склад и аспекты сохраняются в игровых данных.</p>${rows}${orphans}</section>`;
+    const content = `<section class="ea-panel ea-admin-stock"><p>Настройки сохраняются отдельно для каждого растения. Отмеченные аспекты доступны игрокам и учитываются при изготовлении; количество задаётся числовым полем.</p>${rows}${orphans}</section>`;
     let busy = false;
     EA.popup("Алхимия — склад и растения", content, { close: { label: "Закрыть" } }, root => {
+      root.querySelectorAll("[data-stock-herb]").forEach(row => row.querySelectorAll(".ea-stock-aspect-enabled").forEach(checkbox => {
+        checkbox.addEventListener("change", () => {
+          const quantity = row.querySelector(`.ea-stock-aspect-quantity[data-aspect="${CSS.escape(checkbox.value)}"]`);
+          if (quantity) quantity.disabled = !checkbox.checked;
+        });
+      }));
       root.querySelectorAll("[data-stock-action]").forEach(button => {
         button.addEventListener("click", async () => {
           if (!isGM()) return ui.notifications.warn("Доступно только ведущему.");
@@ -34,7 +45,7 @@
           try {
             const fresh = EA.getState();
             const herb = EA.herb?.(id);
-            if (action === "add" || action === "remove" || action === "remove-all") {
+            if (["add", "remove", "remove-all"].includes(action)) {
               const raw = row.querySelector(".ea-stock-quantity").value;
               const count = Number(raw);
               if (action !== "remove-all" && (!raw.trim() || !Number.isSafeInteger(count) || count <= 0)) throw new Error("Укажите положительное целое количество.");
@@ -52,12 +63,16 @@
             } else if (action === "aspects") {
               if (!herb) throw new Error("Растение отсутствует в библиотеке.");
               const next = {};
-              row.querySelectorAll(".ea-stock-aspect:checked").forEach(input => {
-                if (Object.hasOwn(herb.aspects || {}, input.value)) next[input.value] = herb.aspects[input.value];
-              });
+              for (const checkbox of row.querySelectorAll(".ea-stock-aspect-enabled:checked")) {
+                const quantity = row.querySelector(`.ea-stock-aspect-quantity[data-aspect="${CSS.escape(checkbox.value)}"]`);
+                const raw = quantity?.value ?? "";
+                const amount = Number(raw);
+                if (!raw.trim() || !Number.isFinite(amount) || amount < 0) throw new Error(`Укажите корректное количество аспекта «${EA.aspects[checkbox.value] || checkbox.value}».`);
+                next[checkbox.value] = amount;
+              }
               fresh.group.knownAspects[id] = next;
               await EA.commit(fresh);
-              ui.notifications.info("Доступность аспектов для игроков и изготовления сохранена.");
+              ui.notifications.info("Аспекты и их количества сохранены.");
             }
           } catch (error) {
             console.error(`${EA.id} | Управление складом:`, error);
@@ -80,10 +95,8 @@
     }));
   };
 
-  // Keep stable launcher entry points for Foundry settings and older module integrations.
   EA.openAdmin = openAdmin;
   EA.openAdminPanel = openAdmin;
-
   Hooks.on("getSceneControlButtons", controls => {
     if (!isGM()) return;
     const tool = { name: "malcals-extraalchemy-admin", title: "Алхимия — панель ведущего", icon: "fa-solid fa-flask-vial", order: 1000, button: true, visible: true, onChange: openAdmin };
