@@ -1,5 +1,5 @@
 /* Malcal's ExtraAlchemy core — Foundry VTT 13/14 compatibility branch. */
-const EA=globalThis.EA={id:"malcals-extraalchemy",version:"0.9.0.0"};
+const EA=globalThis.EA={id:"malcals-extraalchemy",version:"0.9.0.1"};
 EA.aspects={Vita:"Жизнь",Herba:"Растение",Aqua:"Вода",Ignis:"Огонь",Mortuus:"Смерть",Venenum:"Яд",Motus:"Движение",Sensus:"Чувства",Corpus:"Тело",Praecantatio:"Магия",Terra:"Земля"};
 EA.goals=[["healing","Лечебные"],["poisonous","Ядовитые"],["elemental","Стихийные"],["rare_magic","Редкие и магические"]];
 EA.esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
